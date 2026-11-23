@@ -28,7 +28,7 @@
     <img alt="stars" src="https://img.shields.io/github/stars/Laurent928/dsh-thinking-guard?style=social">
   </a>
   <br>
-  <sub>如果它替你省下过一段时间，回仓库点个 star —— 那是这东西真的被需要的证据</sub>
+  <sub>它替我省过一整个下午。要是也救过你，给颗星吧 —— 我会得意好几天</sub>
 </p>
 
 <p align="center">[English](README.en.md) · <b>中文</b></p>
@@ -336,8 +336,8 @@ node --test "tests/*.test.mjs"
 ---
 
 <p align="center">
-  <sub>读到这里了 —— 顺手点个 <a href="https://github.com/Laurent928/dsh-thinking-guard/stargazers">star</a> 吧，</sub>
+  <sub>读到这儿是真的读完了。<a href="https://github.com/Laurent928/dsh-thinking-guard/stargazers">给颗星</a>吧，</sub>
   <br>
-  <sub>它不会让这个插件变快，但能让下一个人搜到它</sub>
+  <sub>写它的那只鲸半夜爬起来改 bug 会更有底气</sub>
 </p>
 
