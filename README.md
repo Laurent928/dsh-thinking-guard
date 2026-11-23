@@ -23,6 +23,14 @@
   <a href="#-配置">配置</a>
 </p>
 
+<p align="center">
+  <a href="https://github.com/Laurent928/dsh-thinking-guard/stargazers">
+    <img alt="stars" src="https://img.shields.io/github/stars/Laurent928/dsh-thinking-guard?style=social">
+  </a>
+  <br>
+  <sub>如果它替你省下过一段时间，回仓库点个 star —— 那是这东西真的被需要的证据</sub>
+</p>
+
 <p align="center">[English](README.en.md) · <b>中文</b></p>
 
 ---
@@ -324,3 +332,12 @@ node --test "tests/*.test.mjs"
 ```
 
 52 个用例，覆盖：判据数学（严格/宽口径、空行跳过）、各档行为（含档 1 不小压预算、档 2 压一步就恢复）、掐流的运行判据与提前收手、伪造续轮（finish 必须是 tool-calls 且存在 tool-call 块）、followup 续轮与「不许重复注入」、测试钩子必须绑会话、stop 合并去重与上限、提醒模板替换、熔断与连击清零、状态文件按会话隔离与坏文件容错、滑条路由的 GET/POST/403/400/405、浏览器半的装载协议与渲染路径、色阶排序与档位数量、说明文案长度
+
+---
+
+<p align="center">
+  <sub>读到这里了 —— 顺手点个 <a href="https://github.com/Laurent928/dsh-thinking-guard/stargazers">star</a> 吧，</sub>
+  <br>
+  <sub>它不会让这个插件变快，但能让下一个人搜到它</sub>
+</p>
+
