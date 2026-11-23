@@ -10,7 +10,7 @@
   <rect x="0" y="0" width="5" height="66" rx="2.5" fill="#fbbf24"/>
   <circle cx="822" cy="33" r="44" fill="#fbbf24" opacity="0.06"/>
   <text x="28" y="28" font-family="ui-monospace,SFMono-Regular,'SF Mono',Consolas,'Liberation Mono',Menlo,'Microsoft YaHei',monospace" font-size="10.5"
-        fill="#fbbf24" letter-spacing="0.16em">the slider</text>
+        fill="#fbbf24" letter-spacing="0.16em">THE SLIDER</text>
   <text x="28" y="50" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',Helvetica,Arial,sans-serif" font-size="15"
         fill="#b9b9c9">收起省地方，拖开看全貌</text>
 </svg>

@@ -19,7 +19,7 @@
   <rect width="1000" height="240" rx="16" fill="url(#bg)"/>
   <rect x="0.5" y="0.5" width="999" height="239" rx="16" fill="none" stroke="#2c2c3a"/>
 
-  <text x="48" y="82" font-family="ui-monospace,SFMono-Regular,'SF Mono',Consolas,'Liberation Mono',Menlo,'Microsoft YaHei',monospace" font-size="15" fill="#8b8ba7">DeepSeek Harness · plugin</text>
+  <text x="48" y="82" font-family="ui-monospace,SFMono-Regular,'SF Mono',Consolas,'Liberation Mono',Menlo,'Microsoft YaHei',monospace" font-size="15" fill="#8b8ba7">DEEPSEEK HARNESS · PLUGIN</text>
   <text x="48" y="140" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',Helvetica,Arial,sans-serif" font-size="46" font-weight="700" fill="#f4f4f8">dsh-thinking-guard</text>
   <text x="48" y="180" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',Helvetica,Arial,sans-serif" font-size="18" fill="#a3a3bb">让模型别再对着「好。做。好。」原地打转</text>
 
@@ -35,12 +35,12 @@
       <rect x="92" y="-7" width="20" height="11" rx="3" fill="#f87171"/>
     </g>
   </g>
-  <text x="172" y="198" font-family="ui-monospace,SFMono-Regular,'SF Mono',Consolas,'Liberation Mono',Menlo,'Microsoft YaHei',monospace" font-size="12" fill="#6f6f88">off · tell · cut slow · cut fast · abort</text>
+  <text x="172" y="198" font-family="ui-monospace,SFMono-Regular,'SF Mono',Consolas,'Liberation Mono',Menlo,'Microsoft YaHei',monospace" font-size="12" fill="#6f6f88">OFF · TELL · CUT SLOW · CUT FAST · ABORT</text>
 
   <!-- 右侧：退化缩略 -->
   <g transform="translate(660,54)" opacity="0.9">
     <rect x="0" y="0" width="292" height="132" rx="10" fill="#0f1015" stroke="#2a2a38"/>
-    <text x="16" y="26" font-family="ui-monospace,SFMono-Regular,'SF Mono',Consolas,'Liberation Mono',Menlo,'Microsoft YaHei',monospace" font-size="11" fill="#5b5b74">before</text>
+    <text x="16" y="26" font-family="ui-monospace,SFMono-Regular,'SF Mono',Consolas,'Liberation Mono',Menlo,'Microsoft YaHei',monospace" font-size="11" fill="#5b5b74">BEFORE</text>
     <text x="16" y="54" font-family="ui-monospace,SFMono-Regular,'SF Mono',Consolas,'Liberation Mono',Menlo,'Microsoft YaHei',monospace" font-size="13" fill="#f87171">做。</text>
     <text x="16" y="74" font-family="ui-monospace,SFMono-Regular,'SF Mono',Consolas,'Liberation Mono',Menlo,'Microsoft YaHei',monospace" font-size="13" fill="#f87171">好。</text>
     <text x="16" y="94" font-family="ui-monospace,SFMono-Regular,'SF Mono',Consolas,'Liberation Mono',Menlo,'Microsoft YaHei',monospace" font-size="13" fill="#f87171">做。</text>
@@ -48,7 +48,7 @@
 
     <g transform="translate(150,0)">
       <rect x="0" y="0" width="142" height="132" rx="10" fill="#0f1015" stroke="#2a2a38"/>
-      <text x="14" y="26" font-family="ui-monospace,SFMono-Regular,'SF Mono',Consolas,'Liberation Mono',Menlo,'Microsoft YaHei',monospace" font-size="11" fill="#5b5b74">after</text>
+      <text x="14" y="26" font-family="ui-monospace,SFMono-Regular,'SF Mono',Consolas,'Liberation Mono',Menlo,'Microsoft YaHei',monospace" font-size="11" fill="#5b5b74">AFTER</text>
       <text x="14" y="56" font-family="ui-monospace,SFMono-Regular,'SF Mono',Consolas,'Liberation Mono',Menlo,'Microsoft YaHei',monospace" font-size="12" fill="#2dd4bf">调用 image_crop，</text>
       <text x="14" y="76" font-family="ui-monospace,SFMono-Regular,'SF Mono',Consolas,'Liberation Mono',Menlo,'Microsoft YaHei',monospace" font-size="12" fill="#2dd4bf">参数 …</text>
       <text x="14" y="106" font-family="ui-monospace,SFMono-Regular,'SF Mono',Consolas,'Liberation Mono',Menlo,'Microsoft YaHei',monospace" font-size="11" fill="#6b6b85">→ tool call</text>
