@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="300" viewBox="0 0 880 300" role="img" aria-label="五档滑条示意">
+  <defs>
+    <filter id="g1" x="-140%" y="-140%" width="380%" height="380%" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="2.6"/>
+    </filter>
+    <filter id="g2" x="-140%" y="-140%" width="380%" height="380%" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="5.5"/>
+    </filter>
+    <style>
+      .lbl { font-family: system-ui,-apple-system,'Segoe UI',sans-serif; font-size: 13px; fill: #a3a3bb; }
+      .cap { font-family: system-ui,-apple-system,'Segoe UI',sans-serif; font-size: 14px; fill: #6f6f88; }
+      .key { font-family: ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 12px; fill: #8b8ba7; }
+    </style>
+  </defs>
+
+  <rect width="880" height="300" rx="14" fill="#14151b"/>
+  <rect x="0.5" y="0.5" width="879" height="299" rx="14" fill="none" stroke="#2c2c3a"/>
+
+  <text x="40" y="44" class="cap">收起状态——只画当前那一格</text>
+  <text x="40" y="66" class="key">collapsed: only the current step is drawn</text>
+
+  <!-- 收起：单格 + 泛光 -->
+  <g transform="translate(40,84)">
+    <rect x="-3" y="-3" width="34" height="26" rx="8" fill="#2dd4bf" opacity="0.45" filter="url(#g2)"/>
+    <rect x="-1" y="-1" width="30" height="22" rx="6" fill="#2dd4bf" opacity="0.85" filter="url(#g1)"/>
+    <rect x="0" y="0" width="28" height="20" rx="5" fill="#2dd4bf"/>
+    <text x="40" y="15" class="lbl">慢断 · 3/4</text>
+  </g>
+
+  <line x1="40" y1="128" x2="840" y2="128" stroke="#262633" stroke-dasharray="4 6"/>
+
+  <text x="40" y="164" class="cap">展开状态——按下 / 拖动 / 键盘聚焦时</text>
+  <text x="40" y="186" class="key">expanded: while pressed, dragging, or focused</text>
+
+  <!-- 展开：五格 -->
+  <g transform="translate(40,204)">
+    <rect x="-2" y="-2" width="172" height="24" rx="8" fill="none" stroke="#a78bfa" stroke-width="1" opacity="0.55"/>
+    <rect x="0" y="0" width="28" height="20" rx="5" fill="#94a3b8"/>
+    <rect x="34" y="0" width="28" height="20" rx="5" fill="#60a5fa"/>
+    <!-- 当前格 + 泛光 -->
+    <rect x="65" y="-3" width="34" height="26" rx="8" fill="#2dd4bf" opacity="0.45" filter="url(#g2)"/>
+    <rect x="67" y="-1" width="30" height="22" rx="6" fill="#2dd4bf" opacity="0.85" filter="url(#g1)"/>
+    <rect x="68" y="0" width="28" height="20" rx="5" fill="#2dd4bf"/>
+    <rect x="102" y="0" width="28" height="20" rx="5" fill="#fbbf24"/>
+    <rect x="136" y="0" width="28" height="20" rx="5" fill="#f87171"/>
+
+    <text x="190" y="15" class="lbl">关 / 提示 / 慢断 / 快断 / 熔断</text>
+  </g>
+
+  <g transform="translate(40,250)">
+    <rect x="0" y="-10" width="10" height="10" rx="2" fill="#a78bfa"/>
+    <text x="20" y="0" class="key">紫色描边 = 正在操作；上拉过 10px 锁定为全局</text>
+    <rect x="0" y="12" width="10" height="10" rx="2" fill="#2dd4bf" opacity="0.6"/>
+    <text x="20" y="22" class="key">泛光 = 这个对话被手动设过；颜色永远是本档色</text>
+  </g>
+</svg>

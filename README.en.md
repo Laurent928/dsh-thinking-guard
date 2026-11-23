@@ -1,12 +1,117 @@
-# dsh-thinking-guard
+<p align="center">
+  <img src="assets/banner.svg" alt="dsh-thinking-guard" width="880">
+</p>
 
-**A loop guard for the thinking channel** — a DeepSeek Harness plugin that detects and cuts the placeholder loop a model falls into while reasoning, with a five-step intensity slider in the composer toolbar.
+<p align="center">
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-2dd4bf"></a>
+  <a href="package.json"><img alt="Node" src="https://img.shields.io/badge/node-%3E%3D20-60a5fa"></a>
+  <a href="package.json"><img alt="DSH" src="https://img.shields.io/badge/DSH-%E2%89%A50.2.0--rc.1-a78bfa"></a>
+  <img alt="tests" src="https://img.shields.io/badge/tests-54%20passing-4ade80">
+</p>
 
-English · [中文](README.md)
+<p align="center">
+  <b>A loop guard for the thinking channel</b> — detects and cuts the placeholder loop a model
+  falls into while reasoning, with a five-step intensity slider in the composer toolbar.
+</p>
+
+<p align="center">
+  <a href="#-the-symptom">Symptom</a> ·
+  <a href="#-what-it-does">What it does</a> ·
+  <a href="#-install">Install</a> ·
+  <a href="#-the-five-step-slider">Slider</a> ·
+  <a href="#-why-it-works">Why</a> ·
+  <a href="#-configuration">Config</a>
+</p>
+
+<p align="center"><b>English</b> · [中文](README.md)</p>
 
 ---
 
-## 1. What it actually treats
+## 😵 The symptom
+
+The model suddenly starts chanting inside the **thinking channel**:
+
+```
+做。
+好。
+做。
+```
+
+No text, no tool call, just rolling — the community calls it "singing". After a few hundred lines it
+usually does emit the right tool call, but **the time is already gone**, and from the outside you
+cannot tell deep thinking from spinning.
+
+**Measured** on one 157-turn session:
+
+| Metric | Value |
+|---|---|
+| Worst block | 602 of 686 lines were placeholder verbs |
+| Vocabulary | `做。`×1180, `好。`×1068 — two words carrying 2000+ lines |
+| How those blocks ended | **All of them** emitted the correct tool call |
+
+So it is not "thought of it but did not act" — it is **rehearsing the same line hundreds of times before acting**.
+
+## 🛠 What it does
+
+Five escalating tiers. The further down, the more effective and the more expensive. The default is the cleanest one.
+
+| Tier | What it does | Price |
+|---|---|---|
+| 0 Off | Nothing | none |
+| **1 Tell** (default) | System prompt forbids the empty verbs and hands out a closing template | a few dozen characters per request |
+| 2 Cut slow | Cuts the generation, resumes via followup | waits 7–21 s, history stays clean |
+| 3 Cut fast | Cuts, then injects a read-only tool call so the turn continues | a fake record in history, latency <1 s |
+| 4 Abort | Third consecutive loop aborts the turn | you see a failed-run message |
+
+Plus one step that is **not on the slider** and always on: before a request goes out, already-degenerate
+reasoning is stripped from the context (see [Why](#-why-it-works)).
+
+## 🚀 Install
+
+**One click** (no command line needed):
+
+1. **Code → Download ZIP**, unzip to a location you will keep (the plugin loads from there)
+2. Windows: double-click `install.cmd`; macOS / Linux: run `bash install.sh`
+3. The script prints two steps — run `pnpm install` in the profile it names, then **restart DSH yourself**
+4. After the restart you get a five-segment slider at the right of the composer toolbar, defaulting to Tell
+
+The script only backs up the profile's `package.json`, adds a `link:` dependency, and registers the
+package in `dsh.profile.bundles`. **It never touches session data and never restarts your DSH.**
+
+## 🎚 The five-step slider
+
+<p align="center">
+  <img src="assets/slider.svg" alt="five-step slider" width="880">
+</p>
+
+- **Collapsed**, only the current step is drawn; press / drag / focus expands the whole track
+- **Glow** means "this conversation was set by hand", always in the tier colour; inherited values stay quiet
+- The outline turns **violet** while you drag; pull **up past 10px** to lock the value globally
+- From tier 2 upward a one-time warning explains what that tier does and what it costs
+
+## 🧠 Why it works
+
+1. **Abstraction is the disease, specifics are the cure.** Every degenerate block escapes the same way — `（输出 image_crop。）`. The prompt does not scold ("stop looping" is the same shape as the disease); it hands out a template: `调用 <tool名>，参数 <值>`.
+2. **Cutting only stops this turn.** An early-ended generator looks like a normal stop — no error, no retry, just a step with no tool call.
+3. **The real cause is next turn's input.** Degenerate thinking is replayed into every following turn ([DSH discussion #7270](https://github.com/deepseek-ai/deepseek-harness/discussions/7270)), so the model imitates itself. The plugin therefore replaces already-degenerate reasoning with a short note before each request — touching reasoning only.
+
+## 📖 Contents
+
+- [The symptom](#-the-symptom)
+- [What it does](#-what-it-does)
+- [Install](#-install)
+- [The five-step slider](#-the-five-step-slider)
+- [Why it works](#-why-it-works)
+- [The cure: stripping degenerate thinking](#-the-cure-stripping-degenerate-thinking-from-context)
+- [Detector](#-detector-what-counts-as-a-loop)
+- [Install details](#-install-details)
+- [Configuration](#-configuration)
+- [Known limits](#-known-limits)
+- [Tests](#-tests)
+
+---
+
+## 📊 1. What it actually treats
 
 ### The symptom
 
@@ -59,7 +164,7 @@ Look at the last lines of each block; the escape is always the same shape:
 
 ---
 
-## 2. The slider: five steps, cool to warm
+## 🎚 2. The slider: five steps, cool to warm
 
 > [!WARNING]
 > **Raising the tier really does change model behaviour, and one tier writes a fake record into your session history.**
@@ -111,7 +216,7 @@ is intercepted, the dialog explains why, and the button becomes "this conversati
 
 ---
 
-## 3. Detection: what counts as a loop
+## 🔍 3. Detection: what counts as a loop
 
 It counts **consecutive placeholder lines**, not the share of short lines.
 
@@ -129,7 +234,7 @@ The union of the two keeps the detector working when the model switches to a dif
 
 ---
 
-## 4. Install
+## 📦 4. Install
 
 Link it into the profile (does not touch other packages under `node_modules`):
 
@@ -146,7 +251,7 @@ After the restart: a slider appears at the right of the composer toolbar, and `d
 
 ---
 
-## 5. Configuration
+## ⚙️ 5. Configuration
 
 Any key can be overridden from a profile patch:
 
@@ -190,7 +295,7 @@ About `stopSequences`: measured to apply **to the answer text only, not to think
 
 ---
 
-## 6. The browser half must be wrapped in `__ModuleLoader__`
+## 🧩 6. The browser half must be wrapped in `__ModuleLoader__`
 
 `lib/client.js` is not a plain ES module:
 
@@ -206,12 +311,12 @@ return module.exports; } });
 
 ---
 
-## 7. Known unverified
+## ⚠️ 7. Known unverified
 
 - **Whether `stop_sequences` is actually accepted by DeepSeek's Messages API and takes effect in thinking mode has not been tested against a live request.** The code path is proven (`config.stop` → `GenerateOptions.stop` → serialised as `stop_sequences`), but only the server can confirm. First thing after installing: push the slider to 3, run a long task, and watch whether generation halts the moment it writes the loop string.
 - Recall is evidenced by one session only; precision is zero-false-positive across 968 healthy blocks in five other sessions.
 
-## 8. Tests
+## ✅ 8. Tests
 
 ```bash
 node --test "tests/*.test.mjs"
