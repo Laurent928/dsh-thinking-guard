@@ -2,8 +2,8 @@
   <defs>
     <clipPath id="scroll"><rect x="20" y="52" width="240" height="168" rx="8"/></clipPath>
     <style>
-      .mono { font-family: ui-monospace,SFMono-Regular,Menlo,monospace; }
-      .ui { font-family: system-ui,-apple-system,'Segoe UI',sans-serif; }
+      .mono { font-family: ui-monospace,SFMono-Regular,'SF Mono',Consolas,'Liberation Mono',Menlo,'Microsoft YaHei',monospace; }
+      .ui { font-family: -apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',Helvetica,Arial,sans-serif; }
     </style>
   </defs>
   <rect width="880" height="240" rx="14" fill="#14151b"/>

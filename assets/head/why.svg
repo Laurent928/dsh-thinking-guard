@@ -9,8 +9,8 @@
   <rect x="0.5" y="0.5" width="879" height="65" rx="9" fill="none" stroke="#262633"/>
   <rect x="0" y="0" width="5" height="66" rx="2.5" fill="#a78bfa"/>
   <circle cx="822" cy="33" r="44" fill="#a78bfa" opacity="0.06"/>
-  <text x="28" y="28" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="10.5"
+  <text x="28" y="28" font-family="ui-monospace,SFMono-Regular,'SF Mono',Consolas,'Liberation Mono',Menlo,'Microsoft YaHei',monospace" font-size="10.5"
         fill="#a78bfa" letter-spacing="0.16em">background</text>
-  <text x="28" y="50" font-family="system-ui,-apple-system,'Segoe UI',sans-serif" font-size="15"
+  <text x="28" y="50" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',Helvetica,Arial,sans-serif" font-size="15"
         fill="#b9b9c9">六种办法被一条条证伪，最后才走到这里</text>
 </svg>

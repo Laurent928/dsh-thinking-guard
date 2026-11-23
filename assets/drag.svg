@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="880" height="340" viewBox="0 0 880 340" role="img" aria-label="拖动滑条切换五档的动画">
   <defs>
     <style>
-      .ui { font-family: system-ui,-apple-system,'Segoe UI',sans-serif; }
-      .mono { font-family: ui-monospace,SFMono-Regular,Menlo,monospace; }
+      .ui { font-family: -apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',Helvetica,Arial,sans-serif; }
+      .mono { font-family: ui-monospace,SFMono-Regular,'SF Mono',Consolas,'Liberation Mono',Menlo,'Microsoft YaHei',monospace; }
     </style>
   </defs>
 
