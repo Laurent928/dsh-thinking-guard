@@ -27,6 +27,10 @@
 
 ---
 
+<p align="center">
+  <img src="assets/head/sym.svg" alt="" width="880">
+</p>
+
 ## 😵 症状长这样
 
 模型在**思考通道**里突然开始唱：
@@ -53,6 +57,10 @@
 
 <p align="center">
   <img src="assets/loop.svg" alt="空转循环被切断" width="880">
+</p>
+
+<p align="center">
+  <img src="assets/head/why.svg" alt="" width="880">
 </p>
 
 ## 📜 背景：这东西是怎么来的
@@ -92,6 +100,10 @@
 
 ---
 
+<p align="center">
+  <img src="assets/head/what.svg" alt="" width="880">
+</p>
+
 ## 🛠 它做了什么
 
 五档递进，越往后越有效、代价也越硬。默认停在最干净的那一档。
@@ -106,6 +118,10 @@
 
 另外还有一步**不在滑条上**、始终生效的：发请求前把历史上已经退化的思考从上下文里摘掉（见[原理](#-原理)）。
 
+<p align="center">
+  <img src="assets/head/install.svg" alt="" width="880">
+</p>
+
 ## 🚀 安装
 
 **一键装**（不需要懂命令行）：
@@ -118,6 +134,10 @@
 脚本只做三件事：备份 profile 的 `package.json`、加一行 `link:` 依赖、把包名补进 `dsh.profile.bundles`。
 **不碰会话数据，不重启你的 DSH。** 详细步骤和回退办法见[安装](#-安装-1)。
 
+<p align="center">
+  <img src="assets/head/slider.svg" alt="" width="880">
+</p>
+
 ## 🎚 五档滑条
 
 <p align="center">
@@ -128,6 +148,10 @@
 - **泛光**表示「这个对话被手动设过」，颜色永远是本档色；继承来的值保持安静
 - 拖的时候边框变**紫色**；把手**向上抬过 10px** 锁定为全局（双击、长按 ↑ 也行）
 - 从档 2 往上第一次调过去会弹**免责声明**，写明这一档会做什么、代价是什么
+
+<p align="center">
+  <img src="assets/head/how.svg" alt="" width="880">
+</p>
 
 ## 🧠 原理
 
@@ -319,6 +343,10 @@ pnpm add link:<这个目录的绝对路径> -w
 **回退**：删掉那行 `link:` 依赖和 `bundles` 里的那一项，重启即可。插件不写任何已有数据，唯一会写的是 `$DSH_HOME/thinking-guard.json`（每会话档位），删掉无副作用。
 
 ---
+
+<p align="center">
+  <img src="assets/head/cfg.svg" alt="" width="880">
+</p>
 
 ## ⚙️ 六、配置
 

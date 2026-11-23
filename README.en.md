@@ -27,6 +27,10 @@
 
 ---
 
+<p align="center">
+  <img src="assets/head/sym.svg" alt="" width="880">
+</p>
+
 ## 😵 The symptom
 
 The model suddenly starts chanting inside the **thinking channel**:
@@ -53,6 +57,10 @@ So it is not "thought of it but did not act" — it is **rehearsing the same lin
 
 <p align="center">
   <img src="assets/loop.svg" alt="the loop being cut" width="880">
+</p>
+
+<p align="center">
+  <img src="assets/head/why.svg" alt="" width="880">
 </p>
 
 ## 📜 Background: how this came about
@@ -92,6 +100,10 @@ turn, so the model imitates itself. The plugin now strips that garbage from the 
 
 ---
 
+<p align="center">
+  <img src="assets/head/what.svg" alt="" width="880">
+</p>
+
 ## 🛠 What it does
 
 Five escalating tiers. The further down, the more effective and the more expensive. The default is the cleanest one.
@@ -107,6 +119,10 @@ Five escalating tiers. The further down, the more effective and the more expensi
 Plus one step that is **not on the slider** and always on: before a request goes out, already-degenerate
 reasoning is stripped from the context (see [Why](#-why-it-works)).
 
+<p align="center">
+  <img src="assets/head/install.svg" alt="" width="880">
+</p>
+
 ## 🚀 Install
 
 **One click** (no command line needed):
@@ -119,6 +135,10 @@ reasoning is stripped from the context (see [Why](#-why-it-works)).
 The script only backs up the profile's `package.json`, adds a `link:` dependency, and registers the
 package in `dsh.profile.bundles`. **It never touches session data and never restarts your DSH.**
 
+<p align="center">
+  <img src="assets/head/slider.svg" alt="" width="880">
+</p>
+
 ## 🎚 The five-step slider
 
 <p align="center">
@@ -129,6 +149,10 @@ package in `dsh.profile.bundles`. **It never touches session data and never rest
 - **Glow** means "this conversation was set by hand", always in the tier colour; inherited values stay quiet
 - The outline turns **violet** while you drag; pull **up past 10px** to lock the value globally
 - From tier 2 upward a one-time warning explains what that tier does and what it costs
+
+<p align="center">
+  <img src="assets/head/how.svg" alt="" width="880">
+</p>
 
 ## 🧠 Why it works
 
@@ -292,6 +316,10 @@ After the restart: a slider appears at the right of the composer toolbar, and `d
 **Rollback**: remove the `link:` dependency line and the `bundles` entry, then restart. The plugin writes no existing data; its only output is `$DSH_HOME/thinking-guard.json` (per-session level), which is safe to delete.
 
 ---
+
+<p align="center">
+  <img src="assets/head/cfg.svg" alt="" width="880">
+</p>
 
 ## ⚙️ 5. Configuration
 

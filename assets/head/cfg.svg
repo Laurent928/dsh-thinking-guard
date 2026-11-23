@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="66" viewBox="0 0 880 66" role="img" aria-label="二十一个开关，默认值都写在这">
+  <defs>
+    <linearGradient id="gcfg" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#14151b"/>
+      <stop offset="100%" stop-color="#1a1a24"/>
+    </linearGradient>
+  </defs>
+  <rect width="880" height="66" rx="9" fill="url(#gcfg)"/>
+  <rect x="0.5" y="0.5" width="879" height="65" rx="9" fill="none" stroke="#262633"/>
+  <rect x="0" y="0" width="5" height="66" rx="2.5" fill="#94a3b8"/>
+  <circle cx="822" cy="33" r="44" fill="#94a3b8" opacity="0.06"/>
+  <text x="28" y="28" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="10.5"
+        fill="#94a3b8" letter-spacing="0.16em">config</text>
+  <text x="28" y="50" font-family="system-ui,-apple-system,'Segoe UI',sans-serif" font-size="15"
+        fill="#b9b9c9">二十一个开关，默认值都写在这</text>
+</svg>
