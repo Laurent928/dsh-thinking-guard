@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/banner.svg" alt="dsh-thinking-guard" width="880">
+  <img src="assets/banner.svg?v=20261124" alt="dsh-thinking-guard" width="880">
 </p>
 
 <p align="center">
