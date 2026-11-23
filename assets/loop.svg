@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="260" viewBox="0 0 880 260" role="img" aria-label="空转循环被切断的动画示意">
+  <defs>
+    <clipPath id="win"><rect x="24" y="64" width="320" height="150" rx="10"/></clipPath>
+    <filter id="redglow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3"/>
+    </filter>
+    <style>
+      .mono { font-family: ui-monospace,SFMono-Regular,Menlo,monospace; }
+      .ui { font-family: system-ui,-apple-system,'Segoe UI',sans-serif; }
+    </style>
+  </defs>
+
+  <rect width="880" height="260" rx="14" fill="#14151b"/>
+  <rect x="0.5" y="0.5" width="879" height="259" rx="14" fill="none" stroke="#2c2c3a"/>
+
+  <!-- 左：滚动的占位词 -->
+  <text x="24" y="46" class="ui" font-size="13" fill="#8b8ba7">思考通道 · 正在空转</text>
+  <rect x="24" y="64" width="320" height="150" rx="10" fill="#0f1015" stroke="#2a2a38"/>
+  <g clip-path="url(#win)">
+    <g>
+      <animateTransform attributeName="transform" type="translate"
+        values="0,0; 0,-210" dur="3.2s" repeatCount="indefinite"/>
+      <g class="mono" font-size="17" fill="#f87171">
+        <text x="44" y="100">做。</text>
+        <text x="44" y="130">好。</text>
+        <text x="44" y="160">做。</text>
+        <text x="44" y="190">好。</text>
+        <text x="44" y="220">做。</text>
+        <text x="44" y="250">好。</text>
+        <text x="44" y="280">做。</text>
+        <text x="44" y="310">好。</text>
+      </g>
+    </g>
+  </g>
+  <!-- 渐变遮罩，制造无限延伸感 -->
+  <rect x="24" y="64" width="320" height="26" fill="#0f1015" opacity="0.95"/>
+  <rect x="24" y="188" width="320" height="26" fill="#0f1015" opacity="0.95"/>
+  <text x="44" y="232" class="mono" font-size="11" fill="#6b6b85">…重复 602 行</text>
+
+  <!-- 中间：切断 -->
+  <g>
+    <line x1="360" y1="139" x2="470" y2="139" stroke="#f87171" stroke-width="2" stroke-dasharray="6 5">
+      <animate attributeName="opacity" values="0.15;1;0.15" dur="1.6s" repeatCount="indefinite"/>
+    </line>
+    <circle cx="415" cy="139" r="14" fill="#f87171" opacity="0.18" filter="url(#redglow)">
+      <animate attributeName="opacity" values="0.05;0.35;0.05" dur="1.6s" repeatCount="indefinite"/>
+    </circle>
+    <text x="415" y="145" class="mono" font-size="15" fill="#f87171" text-anchor="middle">cut</text>
+  </g>
+
+  <!-- 右：掐断后 -->
+  <text x="500" y="46" class="ui" font-size="13" fill="#8b8ba7">收到收尾模板之后</text>
+  <rect x="500" y="64" width="356" height="150" rx="10" fill="#0f1015" stroke="#2a2a38"/>
+  <g class="mono" font-size="15">
+    <text x="520" y="104" fill="#2dd4bf">调用 image_crop，</text>
+    <text x="520" y="132" fill="#2dd4bf">参数 {</text>
+    <text x="520" y="158" fill="#7dd3fc">  path: "…/a.png",</text>
+    <text x="520" y="182" fill="#7dd3fc">  region: [0.2,0.1,0.8,0.9]</text>
+    <text x="520" y="206" fill="#2dd4bf">}</text>
+  </g>
+  <text x="746" y="206" class="mono" font-size="11" fill="#4ade80">→ tool call</text>
+
+  <!-- 底部说明 -->
+  <text x="24" y="244" class="ui" font-size="12" fill="#6f6f88">
+    抽象是病，具体是解：只要憋出一句带具体工具名的话，思考立刻结束、手就动了。
+  </text>
+</svg>

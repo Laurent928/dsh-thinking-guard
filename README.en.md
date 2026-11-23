@@ -51,6 +51,47 @@ cannot tell deep thinking from spinning.
 
 So it is not "thought of it but did not act" — it is **rehearsing the same line hundreds of times before acting**.
 
+<p align="center">
+  <img src="assets/loop.svg" alt="the loop being cut" width="880">
+</p>
+
+## 📜 Background: how this came about
+
+It did not start as an idea for a plugin. It started with a ghost.
+
+In a drawing session the model sat on "thinking" for minutes. Opening the block:
+
+```
+做。
+好。
+做。
+```
+
+No text, no tool call, just rolling. Two thousand lines later it emitted a perfectly correct tool call —
+**the task got done, but everything in between was burned for nothing**.
+
+So I started from the cheapest ideas and falsified them one by one:
+
+| What was tried | Result |
+|---|---|
+| `stop_sequences` | Reached the server, **does not apply to thinking** — the request carried it, the trigram appeared on line 19, generation ran to line 121 |
+| `frequency_penalty` / `presence_penalty` | Documented as deprecated; sending them does nothing |
+| `temperature` | No effect in thinking mode |
+| `tool_choice: required` | 400 in thinking mode |
+| Shrinking `max_tokens` | Truncates honest answers; rejected |
+| Reminders in tool results | `tool/result` is a session event append, not a hook |
+
+Only then came "count inside the stream and cut" — and cutting turned out to end the turn outright
+(a stop with no tool call), which is why the fast tier synthesizes a read-only call to push the turn forward.
+
+**The real fix came last**: DSH discussion #7270 shows degenerate thinking is replayed into every following
+turn, so the model imitates itself. The plugin now strips that garbage from the context before each request.
+
+> The community calls this "singing". It is not something you configured wrong — it is a known degeneration
+> of reasoning models under long context and high effort.
+
+---
+
 ## 🛠 What it does
 
 Five escalating tiers. The further down, the more effective and the more expensive. The default is the cleanest one.
@@ -98,6 +139,7 @@ package in `dsh.profile.bundles`. **It never touches session data and never rest
 ## 📖 Contents
 
 - [The symptom](#-the-symptom)
+- [Background](#-background-how-this-came-about)
 - [What it does](#-what-it-does)
 - [Install](#-install)
 - [The five-step slider](#-the-five-step-slider)

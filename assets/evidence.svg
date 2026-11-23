@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="240" viewBox="0 0 880 240" role="img" aria-label="一次真实的退化块：602 行占位词之后才动手">
+  <defs>
+    <clipPath id="scroll"><rect x="20" y="52" width="240" height="168" rx="8"/></clipPath>
+    <style>
+      .mono { font-family: ui-monospace,SFMono-Regular,Menlo,monospace; }
+      .ui { font-family: system-ui,-apple-system,'Segoe UI',sans-serif; }
+    </style>
+  </defs>
+  <rect width="880" height="240" rx="14" fill="#14151b"/>
+  <rect x="0.5" y="0.5" width="879" height="239" rx="14" fill="none" stroke="#2c2c3a"/>
+
+  <text x="20" y="34" class="ui" font-size="13" fill="#8b8ba7">真实的思考块（截取）</text>
+
+  <rect x="20" y="52" width="240" height="168" rx="8" fill="#0f1015" stroke="#2a2a38"/>
+  <g clip-path="url(#scroll)">
+    <g>
+      <animateTransform attributeName="transform" type="translate" values="0,0; 0,-180" dur="2.6s" repeatCount="indefinite"/>
+      <g class="mono" font-size="16" fill="#f87171">
+        <text x="36" y="86">做。</text>
+        <text x="36" y="114">好。</text>
+        <text x="36" y="142">做。</text>
+        <text x="36" y="170">好。</text>
+        <text x="36" y="198">做。</text>
+        <text x="36" y="226">好。</text>
+        <text x="36" y="254">做。</text>
+      </g>
+    </g>
+  </g>
+  <text x="36" y="212" class="mono" font-size="11" fill="#6b6b85">602 / 686 行</text>
+
+  <g class="ui" font-size="13">
+    <text x="292" y="86" fill="#8b8ba7">词表窄得惊人</text>
+    <text x="292" y="112" class="mono" font-size="14" fill="#fcd34d">做。 × 1180</text>
+    <text x="292" y="136" class="mono" font-size="14" fill="#fcd34d">好。 × 1068</text>
+    <text x="292" y="166" fill="#8b8ba7">两个词撑起两千多行。</text>
+
+    <text x="580" y="86" fill="#8b8ba7">它其实知道自己在打转</text>
+    <text x="580" y="112" class="mono" font-size="12" fill="#7dd3fc">「我陷入循环了」</text>
+    <text x="580" y="134" class="mono" font-size="12" fill="#7dd3fc">「这太荒谬了」</text>
+    <text x="580" y="156" class="mono" font-size="12" fill="#7dd3fc">「我在浪费 token」</text>
+    <text x="580" y="186" fill="#8b8ba7">骂了自己约四百行才醒。</text>
+  </g>
+
+  <text x="20" y="234" class="ui" font-size="12" fill="#6f6f88">所以「提醒它别空转」没用——那和病同形。</text>
+</svg>
