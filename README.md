@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/banner.svg?v=20261124" alt="dsh-thinking-guard" width="880">
+  <img src="assets/banner-v2.svg" alt="dsh-thinking-guard" width="880">
 </p>
 
 <p align="center">
@@ -31,7 +31,7 @@
   <sub>它替我省过一整个下午。要是也救过你，给颗星吧 —— 我会得意好几天</sub>
 </p>
 
-<p align="center">[English](README.en.md) · <b>中文</b></p>
+<p align="center"><a href="README.en.md">English</a> · <b>中文</b></p>
 
 ---
 

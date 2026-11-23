@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/banner.svg?v=20261124" alt="dsh-thinking-guard" width="880">
+  <img src="assets/banner-v2.svg" alt="dsh-thinking-guard" width="880">
 </p>
 
 <p align="center">
@@ -23,7 +23,7 @@
   <a href="#-configuration">Config</a>
 </p>
 
-<p align="center"><b>English</b> · [中文](README.md)</p>
+<p align="center"><b>English</b> · <a href="README.md">中文</a></p>
 
 ---
 
