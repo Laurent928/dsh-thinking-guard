@@ -85,6 +85,14 @@ const DEFAULTS = {
   streamKillDryRun: false,
   /** 诊断探针：把流内中间件的关键节点写进 $DSH_HOME/thinking-guard-trace.log。 */
   traceEnabled: true,
+  /**
+   * 历史消毒：发请求前把已经退化的 reasoning 从 messages 里换成一句短的。
+   *
+   * 退化的思考会被逐轮回传进后续每轮输入（DSH 官方 Discussion #7270 实测），
+   * 模型模仿自己 → 自我强化。掐断只管这一轮，摘掉才算治本。
+   * 只动 assistant 的 reasoning 块，正文与工具调用一概不碰。
+   */
+  scrubDegenerateHistory: true,
   /** 被掐断后，下一步给模型的一句提示（空字符串 = 不提示）。 */
   afterKillText: '你上一步在思考里重复写「做。/好。」被截断了，那条思路没走完。别重新推一遍，直接做你上一步已经决定的事。',
   /** 连续掐断太多次就先停手，免得陷入「掐→重想→再掐」的死循环（0 = 不限）。 */
@@ -102,6 +110,37 @@ const DEFAULTS = {
   /** 快速续轮没做成时，退回 followup 续轮。 */
   followupFallback: true,
 };
+
+/**
+ * 把历史里已经退化的 reasoning 块换成一句短的。
+ *
+ * 依据（DSH 官方 Discussion #7270）：退化的思考会被 serialize.ts **逐轮回传**进后续每一轮输入，
+ * 模型倾向于模仿自己刚才的模式 → 自我强化。所以只在「这一轮」里掐断是治标的，
+ * 把那段垃圾从下一轮的输入里摘掉才是治本。
+ *
+ * 只动 assistant 的 reasoning 块，正文和工具调用一概不碰；判定沿用同一套退化判据。
+ * @param messages - 即将发给 provider 的消息数组（GenerateOptions.messages）。
+ * @param cfg - 判据配置。
+ * @returns 改后的新数组与被清掉的块数。
+ */
+export function scrubDegenerateReasoning(messages, cfg) {
+  if (!Array.isArray(messages)) return { messages, removed: 0 };
+  let removed = 0;
+  const next = messages.map((message) => {
+    if (message?.role !== 'assistant' || !Array.isArray(message.content)) return message;
+    let touched = false;
+    const content = message.content.map((block) => {
+      if (block?.type !== 'reasoning' || typeof block.text !== 'string') return block;
+      const metrics = measure(block.text.split('\n'));
+      if (!isDegraded(metrics, cfg)) return block;
+      touched = true;
+      removed += 1;
+      return { ...block, text: `（上一段思考陷入重复 ${metrics.markRun} 行，已省略）` };
+    });
+    return touched ? { ...message, content } : message;
+  });
+  return { messages: removed > 0 ? next : messages, removed };
+}
 
 /** 无宾语的执行意图词，整行只有它自己。 */
 const MARK_LINE = /^[（(]?(做|好|写|输出|调用|执行|看|停|嗯|走|来|继续)[。，、)]*[。）)]?$/;
@@ -373,6 +412,24 @@ export function apply(ctx, config = {}) {
       const sid0 = options?.sessionId ?? '(none)';
       const lv0 = levelFor(sid0);
       trace(`stream 进入 purpose=${options?.purpose ?? '-'} sid=${String(sid0).slice(0, 16)} level=${lv0}`);
+
+      // ⓪ 治本一步：把历史上已经退化的 reasoning 从这一轮的输入里摘掉。
+      //    退化的思考会被逐轮回传，模型模仿自己 → 自我强化；不摘就会一直喂它垃圾。
+      //    options 是 next() 闭包里捕获的同一个对象，改它等于改即将发出的请求。
+      if (cfg.scrubDegenerateHistory && lv0 >= 1 && options && typeof options === 'object') {
+        try {
+          const before = options.messages;
+          const scrubbed = scrubDegenerateReasoning(before, cfg);
+          if (scrubbed.removed > 0 && scrubbed.messages !== before) {
+            options.messages = scrubbed.messages;
+            trace(`清掉 ${scrubbed.removed} 段退化思考（历史消毒）`);
+            log(`从上下文里摘掉 ${scrubbed.removed} 段退化思考`);
+          }
+        } catch (error) {
+          trace(`历史消毒失败 ${String(error)}`);
+        }
+      }
+
       if (!cfg.streamKillEnabled) { trace('未启用，透传'); yield* next(); return; }
       const sid = options?.sessionId ?? 'global';
       const killLevel = levelFor(sid);

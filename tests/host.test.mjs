@@ -550,17 +550,39 @@ test('档位 1（提示）：命中退化也不改预算', async () => {
   assert.equal(out.maxTokens, 256000, '档位 1 不该改预算');
 });
 
-test('改名兼容：新文件名读不到时，自动回退读旧的 reasoning-guard.json', async () => {
-  const legacy = path.join(HOME, 'reasoning-guard.json');
-  const fresh = path.join(HOME, 'thinking-guard.json');
-  for (const f of [legacy, fresh]) { try { fs.unlinkSync(f); } catch { /* 不存在就算了 */ } }
-  // 只有旧文件：写一份 global=3 进去
-  fs.writeFileSync(legacy, JSON.stringify({ version: 2, global: 3, sessions: {}, order: [] }), 'utf8');
-  assert.equal(readGlobal(fresh), 3, '应能读到旧文件里的 global');
+test('历史消毒：把退化的 reasoning 换成短句，正文和工具调用不动', async () => {
+  const { scrubDegenerateReasoning } = await import('../src/index.js');
+  const cfg = { minLines: 10, maxRun: 25, looseRun: 15, looseUniq: 0.4 };
+  const degenerate = '做。\n'.repeat(60);
+  const messages = [
+    { role: 'user', content: [{ type: 'text', text: '开始' }] },
+    {
+      role: 'assistant',
+      content: [
+        { type: 'reasoning', text: degenerate },
+        { type: 'text', text: '好的，我来看看。' },
+        { type: 'tool-call', id: 'c1', name: 'read', arguments: '{}' },
+      ],
+    },
+    { role: 'user', content: [{ type: 'text', text: '继续' }] },
+  ];
+  const out = scrubDegenerateReasoning(messages, cfg);
+  assert.equal(out.removed, 1, '应清掉一段');
+  const cleaned = out.messages[1].content;
+  assert.match(cleaned[0].text, /已省略/, 'reasoning 被换成短句');
+  assert.equal(cleaned[1].text, '好的，我来看看。', '正文原样');
+  assert.equal(cleaned[2].name, 'read', '工具调用原样');
+  assert.equal(messages[1].content[0].text, degenerate, '原数组未被就地修改');
+});
 
-  // 新文件一旦存在就优先用它，不该再被旧文件影响
-  fs.writeFileSync(fresh, JSON.stringify({ version: 2, global: 1, sessions: {}, order: [] }), 'utf8');
-  assert.equal(readGlobal(fresh), 1, '新文件存在时以新文件为准');
+test('历史消毒：正常思考不动', async () => {
+  const { scrubDegenerateReasoning } = await import('../src/index.js');
+  const cfg = { minLines: 10, maxRun: 25, looseRun: 15, looseUniq: 0.4 };
+  const normal = '先看 docs 目录，然后 grep 一下关键词。\n' + '再确认入口文件在哪。\n'.repeat(12);
+  const messages = [{ role: 'assistant', content: [{ type: 'reasoning', text: normal }] }];
+  const out = scrubDegenerateReasoning(messages, cfg);
+  assert.equal(out.removed, 0, '正常思考不该被清');
+  assert.equal(out.messages, messages, '没命中就原样返回同一个引用');
 });
 
 test('系统提示只在配置了文案时注册', () => {

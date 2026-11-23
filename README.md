@@ -110,7 +110,23 @@
 
 ---
 
-## 三、判据：怎么算「空转」
+## 三、治本的一步：把退化思考从上下文里摘掉
+
+除了在「这一轮」动手，插件还会在**发请求之前**做一件事：扫一遍即将发给模型的历史，
+把其中**已经退化的 reasoning 块**换成一句短的注记。
+
+> 为什么需要这个：[DSH 官方讨论 #7270](https://github.com/deepseek-ai/deepseek-harness/discussions/7270) 实测指出，
+> 退化的思考会被 `serialize.ts` **逐轮回传**进后续每一轮的输入，模型倾向于模仿自己刚才的模式，
+> 于是下一轮更严重。只在当轮掐断是止血，把垃圾从下一轮输入里摘掉才算治因。
+
+- **只动 assistant 的 reasoning 块**：正文和工具调用一概不碰；判据与下面「四、判据」完全同一套。
+- 被摘掉的块换成：`（上一段思考陷入重复 N 行，已省略）`。
+- **不可逆但安全**：会话日志里的原文不动，只是这一次请求不带它；下一轮如果仍然退化会再摘一次。
+- 想关掉：配置项 `scrubDegenerateHistory: false`。
+
+---
+
+## 四、判据：怎么算「空转」
 
 数的是**连续占位行数**，不是短行占比。
 
@@ -128,24 +144,35 @@
 
 ---
 
-## 四、安装
+## 五、安装
 
-本地 link 进 profile（不改 `node_modules` 里别人的包）：
+### 方式一：一键装（不需要懂命令行）
+
+1. 下载本仓库（右上角 **Code → Download ZIP**），解压到**你打算长期放它的位置**——这个目录以后不能删、不能挪，插件会直接从这儿加载。
+2. **Windows**：双击解压目录里的 `install.cmd`；**macOS / Linux**：在终端里跑 `bash install.sh`。
+3. 脚本会自己找到你的 DSH、备份 profile、把插件挂上去；跑完会打印两句话，照着做：
+   - 去它给出的 profile 目录跑一次 `pnpm install`
+   - **自己重启 DSH 桌面版**
+4. 重启后：输入框工具条右侧出现五格小滑条，默认停在「提示」档。
+
+脚本只做三件事：备份 `profiles/desktop/package.json`、加一行 `link:` 依赖、把包名补进 `dsh.profile.bundles`。**不碰任何会话数据，不重启你的 DSH。**
+
+出问题想退回：把脚本打印出来的那个备份目录里的 `package.json.bak` 覆盖回去，再跑一次 `pnpm install`。
+
+### 方式二：手动装（知道自己在干嘛的人）
 
 ```bash
 # 在 profile 目录（例如 ~/.dsh/profiles/desktop）
 pnpm add link:<这个目录的绝对路径> -w
 ```
 
-然后在 profile 的 `package.json` 里把包名加进 `dsh.profile.bundles`，**手动重启 DSH**。
+然后把包名加进 profile `package.json` 的 `dsh.profile.bundles`，**手动重启 DSH**。
 
-重启后：输入框工具条右侧出现滑条，插件页能看到 `dsh-thinking-guard`。
-
-**回退**：删掉 profile `package.json` 里的那行 `link:` 依赖和 `bundles` 里的那一项，重启即可。插件不写任何已有数据，唯一会写的是 `$DSH_HOME/thinking-guard.json`（每会话档位），删掉无副作用。
+**回退**：删掉那行 `link:` 依赖和 `bundles` 里的那一项，重启即可。插件不写任何已有数据，唯一会写的是 `$DSH_HOME/thinking-guard.json`（每会话档位），删掉无副作用。
 
 ---
 
-## 五、配置
+## 六、配置
 
 profile patch 里可覆盖任意一项。
 
@@ -201,7 +228,7 @@ profile patch 里可覆盖任意一项。
 
 ---
 
-## 六、浏览器半必须包一层 `__ModuleLoader__`
+## 七、浏览器半必须包一层 `__ModuleLoader__`
 
 `lib/client.js` 不是普通 ES 模块：
 
@@ -217,12 +244,12 @@ return module.exports; } });
 
 ---
 
-## 七、已知未验证
+## 八、已知未验证
 
 - **`stop_sequences` 是否被 DeepSeek 的 Messages API 真正接受、思考模式下是否生效，没在真请求上验过。** 代码路径是通的（`config.stop` → `GenerateOptions.stop` → 序列化成 `stop_sequences`），但服务端接不接受只有发一次才知道。装上后第一件事：滑条推到 3，跑一个长任务，看它有没有在写到「做。好。做。」时当场停住。
 - 召回率只有出事那一个会话作证；精度在另外 5 个会话 968 个正常块上零误报。
 
-## 八、测试
+## 九、测试
 
 ```bash
 node --test "tests/*.test.mjs"
