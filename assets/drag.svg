@@ -1,108 +1,138 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="880" height="320" viewBox="0 0 880 320" role="img" aria-label="拖动滑条切换五档的动画">
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="330" viewBox="0 0 880 330" role="img" aria-label="拖动滑条切换五档的动画">
   <defs>
-    <filter id="glowTeal" x="-140%" y="-140%" width="380%" height="380%" color-interpolation-filters="sRGB">
-      <feGaussianBlur stdDeviation="4"/>
-    </filter>
     <style>
       .ui { font-family: system-ui,-apple-system,'Segoe UI',sans-serif; }
       .mono { font-family: ui-monospace,SFMono-Regular,Menlo,monospace; }
     </style>
   </defs>
 
-  <rect width="880" height="320" rx="14" fill="#14151b"/>
-  <rect x="0.5" y="0.5" width="879" height="319" rx="14" fill="none" stroke="#2c2c3a"/>
+  <!--
+    统一时间轴（11 秒一轮，全部动画共用同一组 keyTimes，保证同步）：
+      0.00–0.18  停在第 1 格（提示）
+      0.18–0.24  移到第 2 格
+      0.24–0.42  停（慢断）
+      0.42–0.48  移到第 3 格
+      0.48–0.66  停（快断）
+      0.66–0.72  移到第 4 格
+      0.72–0.90  停（熔断）
+      0.90–1.00  移回第 1 格
+    格子 x：34 / 78 / 122 / 166 / 210（宽 38，间隔 44）
+  -->
 
-  <text x="34" y="42" class="ui" font-size="13" fill="#8b8ba7">拖动滑条 · 每档做什么、代价是什么</text>
+  <rect width="880" height="330" rx="14" fill="#14151b"/>
+  <rect x="0.5" y="0.5" width="879" height="329" rx="14" fill="none" stroke="#2c2c3a"/>
 
-  <!-- 轨道：五格 -->
-  <g transform="translate(34,74)">
-    <rect x="-4" y="-4" width="212" height="42" rx="10" fill="none" stroke="#a78bfa" stroke-width="1" opacity="0.5"/>
-    <rect x="0" y="0" width="38" height="34" rx="6" fill="#94a3b8" opacity="0.55"/>
-    <rect x="44" y="0" width="38" height="34" rx="6" fill="#60a5fa" opacity="0.8"/>
-    <rect x="88" y="0" width="38" height="34" rx="6" fill="#2dd4bf" opacity="0.55"/>
-    <rect x="132" y="0" width="38" height="34" rx="6" fill="#fbbf24" opacity="0.55"/>
-    <rect x="176" y="0" width="38" height="34" rx="6" fill="#f87171" opacity="0.55"/>
-  </g>
+  <text x="34" y="40" class="ui" font-size="13" fill="#8b8ba7">拖动滑条 · 停在哪一档，右边就告诉你那一档做什么</text>
 
-  <!-- 当前格的高亮（跟随指针移动） -->
+  <!-- 轨道五格（静态底色） -->
   <g>
-    <rect x="34" y="74" width="38" height="34" rx="6" fill="#60a5fa" opacity="0.35" filter="url(#glowTeal)">
-      <animate attributeName="x" values="34; 122; 166; 210; 122" dur="9s" repeatCount="indefinite"/>
-      <animate attributeName="fill" values="#60a5fa;#2dd4bf;#fbbf24;#f87171;#60a5fa" dur="9s" repeatCount="indefinite"/>
-    </rect>
+    <rect x="34" y="72" width="38" height="34" rx="6" fill="#94a3b8" opacity="0.5"/>
+    <rect x="78" y="72" width="38" height="34" rx="6" fill="#60a5fa" opacity="0.5"/>
+    <rect x="122" y="72" width="38" height="34" rx="6" fill="#2dd4bf" opacity="0.5"/>
+    <rect x="166" y="72" width="38" height="34" rx="6" fill="#fbbf24" opacity="0.5"/>
+    <rect x="210" y="72" width="38" height="34" rx="6" fill="#f87171" opacity="0.5"/>
   </g>
 
-  <!-- 指针（小手） -->
+  <!-- 当前格高亮：x 与颜色共用同一时间轴 -->
+  <rect x="34" y="72" width="38" height="34" rx="6" fill="#60a5fa" opacity="0.85">
+    <animate attributeName="x"
+      values="34;34;78;78;122;122;166;166;34"
+      keyTimes="0;0.18;0.24;0.42;0.48;0.66;0.72;0.90;1"
+      dur="11s" repeatCount="indefinite"/>
+    <animate attributeName="fill"
+      values="#60a5fa;#60a5fa;#2dd4bf;#2dd4bf;#fbbf24;#fbbf24;#f87171;#f87171;#60a5fa"
+      keyTimes="0;0.18;0.24;0.42;0.48;0.66;0.72;0.90;1"
+      dur="11s" repeatCount="indefinite"/>
+  </rect>
+
+  <!-- 拖动中的紫色描边（跟着高亮走） -->
+  <rect x="31" y="69" width="44" height="40" rx="8" fill="none" stroke="#a78bfa" stroke-width="1.2" opacity="0.75">
+    <animate attributeName="x"
+      values="31;31;75;75;119;119;163;163;31"
+      keyTimes="0;0.18;0.24;0.42;0.48;0.66;0.72;0.90;1"
+      dur="11s" repeatCount="indefinite"/>
+  </rect>
+
+  <!-- 鼠标指针：translate 与上面同一条时间轴 -->
   <g>
     <animateTransform attributeName="transform" type="translate"
-      values="0,0; 0,0; 88,0; 88,0; 132,0; 132,0; 176,0; 176,0; 88,0; 88,0"
-      keyTimes="0; 0.09; 0.18; 0.30; 0.40; 0.52; 0.62; 0.74; 0.84; 1"
-      dur="9s" repeatCount="indefinite"/>
-    <g transform="translate(76,120)">
-      <path d="M0,0 L0,17 L4.6,12.8 L7.4,19 L10.6,17.6 L7.9,11.6 L14,11.2 Z"
-            fill="#f4f4f8" stroke="#1b1b24" stroke-width="1.2" stroke-linejoin="round"/>
-    </g>
+      values="34,108; 34,108; 78,108; 78,108; 122,108; 122,108; 166,108; 166,108; 34,108"
+      keyTimes="0;0.18;0.24;0.42;0.48;0.66;0.72;0.90;1"
+      dur="11s" repeatCount="indefinite"/>
+    <path d="M12,0 L12,20 L17.4,15 L21,22.4 L25,20.6 L21.6,13.4 L29,13 Z"
+          fill="#f4f4f8" stroke="#15151d" stroke-width="1.3" stroke-linejoin="round"/>
   </g>
 
-  <!-- 五档标签 -->
+  <!-- 档位名 -->
   <g class="ui" font-size="11" fill="#6f6f88">
-    <text x="36" y="152" text-anchor="middle">关</text>
-    <text x="97" y="152" text-anchor="middle">提示</text>
-    <text x="141" y="152" text-anchor="middle">慢断</text>
-    <text x="185" y="152" text-anchor="middle">快断</text>
-    <text x="229" y="152" text-anchor="middle">熔断</text>
+    <text x="53" y="126" text-anchor="middle">关</text>
+    <text x="97" y="126" text-anchor="middle">提示</text>
+    <text x="141" y="126" text-anchor="middle">慢断</text>
+    <text x="185" y="126" text-anchor="middle">快断</text>
+    <text x="229" y="126" text-anchor="middle">熔断</text>
   </g>
 
-  <!-- 右侧：随档位切换的说明 -->
-  <g transform="translate(300,64)">
-    <rect x="0" y="0" width="546" height="196" rx="12" fill="#0f1015" stroke="#2a2a38"/>
+  <!-- 右侧说明卡：四段文字块，各自按同一时间轴显隐 -->
+  <g transform="translate(300,66)">
+    <rect x="0" y="0" width="546" height="200" rx="12" fill="#0f1015" stroke="#2a2a38"/>
 
     <!-- 档1 提示 -->
-    <g opacity="1">
-      <animate attributeName="opacity" values="0;0;1;1;0;0;0;0;0;1" keyTimes="0;0.09;0.10;0.19;0.20;0.60;0.74;0.83;0.84;0.95" dur="9s" repeatCount="indefinite"/>
-      <text x="24" y="40" class="mono" font-size="12" fill="#60a5fa">TIER 1</text>
-      <text x="24" y="74" class="ui" font-size="26" font-weight="700" fill="#f4f4f8">提 示</text>
-      <text x="24" y="108" class="ui" font-size="14" fill="#b9b9c9">系统提示里禁掉那几个空词，再给一个收尾模板。</text>
-      <text x="24" y="136" class="ui" font-size="14" fill="#7dd3fc">代价：每次请求多几十个字。</text>
-      <text x="24" y="168" class="ui" font-size="13" fill="#4ade80">一个字节的请求参数都不改 ← 默认停在这</text>
+    <g>
+      <animate attributeName="opacity"
+        values="1;1;0;0;0;0;0;0;1"
+        keyTimes="0;0.18;0.24;0.42;0.48;0.66;0.72;0.90;1"
+        dur="11s" repeatCount="indefinite"/>
+      <text x="26" y="38" class="mono" font-size="12" fill="#60a5fa">TIER 1 · 提示</text>
+      <text x="26" y="74" class="ui" font-size="17" fill="#f4f4f8">在系统提示里禁掉那几个空词，再给它一个能照抄的句式。</text>
+      <text x="26" y="112" class="ui" font-size="15" fill="#fcd34d">代价：每次请求多几十个字。</text>
+      <text x="26" y="150" class="ui" font-size="14" fill="#4ade80">一个字节的请求参数都不改 ← 默认停在这里</text>
+      <text x="26" y="180" class="ui" font-size="13" fill="#6f6f88">零风险、可移植，先靠它。</text>
     </g>
 
     <!-- 档2 慢断 -->
-    <g opacity="0">
-      <animate attributeName="opacity" values="0;0;0;1;1;0;0;0;0;0" keyTimes="0;0.18;0.19;0.20;0.29;0.30;0.52;0.72;0.83;0.95" dur="9s" repeatCount="indefinite"/>
-      <text x="24" y="40" class="mono" font-size="12" fill="#2dd4bf">TIER 2</text>
-      <text x="24" y="74" class="ui" font-size="26" font-weight="700" fill="#f4f4f8">慢 断</text>
-      <text x="24" y="108" class="ui" font-size="14" fill="#b9b9c9">数到连续短行就砍掉生成，再用 followup 起下一轮。</text>
-      <text x="24" y="136" class="ui" font-size="14" fill="#fcd34d">代价：等 7–21 秒，历史是干净的。</text>
-      <text x="24" y="168" class="ui" font-size="13" fill="#8b8ba7">会话日志里不会多出任何假东西</text>
+    <g>
+      <animate attributeName="opacity"
+        values="0;0;1;1;0;0;0;0;0"
+        keyTimes="0;0.18;0.24;0.42;0.48;0.66;0.72;0.90;1"
+        dur="11s" repeatCount="indefinite"/>
+      <text x="26" y="38" class="mono" font-size="12" fill="#2dd4bf">TIER 2 · 慢断</text>
+      <text x="26" y="74" class="ui" font-size="17" fill="#f4f4f8">数到连续短行就砍掉这次生成，再用 followup 起下一轮。</text>
+      <text x="26" y="112" class="ui" font-size="15" fill="#fcd34d">代价：要等 7–21 秒。</text>
+      <text x="26" y="150" class="ui" font-size="14" fill="#4ade80">会话日志里不会多出任何假东西</text>
+      <text x="26" y="180" class="ui" font-size="13" fill="#6f6f88">拿时间换干净。</text>
     </g>
 
     <!-- 档3 快断 -->
-    <g opacity="0">
-      <animate attributeName="opacity" values="0;0;0;0;0;1;1;0;0;0" keyTimes="0;0.30;0.31;0.39;0.40;0.41;0.51;0.52;0.83;0.95" dur="9s" repeatCount="indefinite"/>
-      <text x="24" y="40" class="mono" font-size="12" fill="#fbbf24">TIER 3</text>
-      <text x="24" y="74" class="ui" font-size="26" font-weight="700" fill="#f4f4f8">快 断</text>
-      <text x="24" y="108" class="ui" font-size="14" fill="#b9b9c9">同样砍掉生成，但补一个只读工具调用，把这一轮推到下一步。</text>
-      <text x="24" y="136" class="ui" font-size="14" fill="#fcd34d">代价：历史里多一条假的 get_goal 调用。</text>
-      <text x="24" y="168" class="ui" font-size="13" fill="#4ade80">延迟 &lt;1 秒 —— 拿干净换速度</text>
+    <g>
+      <animate attributeName="opacity"
+        values="0;0;0;0;1;1;0;0;0"
+        keyTimes="0;0.18;0.24;0.42;0.48;0.66;0.72;0.90;1"
+        dur="11s" repeatCount="indefinite"/>
+      <text x="26" y="38" class="mono" font-size="12" fill="#fbbf24">TIER 3 · 快断</text>
+      <text x="26" y="74" class="ui" font-size="17" fill="#f4f4f8">同样砍掉生成，但补一个只读工具调用，把这一轮推到下一步。</text>
+      <text x="26" y="112" class="ui" font-size="15" fill="#fcd34d">代价：历史里多一条假的 get_goal 调用。</text>
+      <text x="26" y="150" class="ui" font-size="14" fill="#4ade80">延迟不到 1 秒</text>
+      <text x="26" y="180" class="ui" font-size="13" fill="#6f6f88">拿干净换速度。</text>
     </g>
 
     <!-- 档4 熔断 -->
-    <g opacity="0">
-      <animate attributeName="opacity" values="0;0;0;0;0;0;0;1;1;0" keyTimes="0;0.52;0.53;0.61;0.62;0.72;0.73;0.74;0.83;0.84" dur="9s" repeatCount="indefinite"/>
-      <text x="24" y="40" class="mono" font-size="12" fill="#f87171">TIER 4</text>
-      <text x="24" y="74" class="ui" font-size="26" font-weight="700" fill="#f4f4f8">熔 断</text>
-      <text x="24" y="108" class="ui" font-size="14" fill="#b9b9c9">同一轮里连续第 3 次空转，直接中止这一轮。</text>
-      <text x="24" y="136" class="ui" font-size="14" fill="#fca5a5">代价：你会看到一条「本轮运行失败」，那一轮白跑。</text>
-      <text x="24" y="168" class="ui" font-size="13" fill="#f87171">不能设成全局 —— 每次调过来都会问一遍</text>
+    <g>
+      <animate attributeName="opacity"
+        values="0;0;0;0;0;0;1;1;0"
+        keyTimes="0;0.18;0.24;0.42;0.48;0.66;0.72;0.90;1"
+        dur="11s" repeatCount="indefinite"/>
+      <text x="26" y="38" class="mono" font-size="12" fill="#f87171">TIER 4 · 熔断</text>
+      <text x="26" y="74" class="ui" font-size="17" fill="#f4f4f8">同一轮里连续第 3 次空转，直接中止这一轮。</text>
+      <text x="26" y="112" class="ui" font-size="15" fill="#fca5a5">代价：你会看到一条「本轮运行失败」，那一轮白跑。</text>
+      <text x="26" y="150" class="ui" font-size="14" fill="#f87171">不能设成全局 ← 每次调过来都会再问一遍</text>
+      <text x="26" y="180" class="ui" font-size="13" fill="#6f6f88">最凶的一档，最容易误伤。</text>
     </g>
   </g>
 
-  <!-- 底部旁白 -->
-  <text x="34" y="286" class="ui" font-size="12.5" fill="#6f6f88">
-    收起时只显示当前那一格；按下、拖动或键盘聚焦时才展开成整条。
+  <text x="34" y="292" class="ui" font-size="12.5" fill="#6f6f88">
+    收起时只显示当前那一格；按下、拖动或键盘聚焦才展开成整条。
   </text>
-  <text x="34" y="306" class="ui" font-size="12.5" fill="#6f6f88">
-    拖动过程中边框变成紫色；把手向上抬过 10px 就是「设为全局」。
+  <text x="34" y="314" class="ui" font-size="12.5" fill="#6f6f88">
+    把手向上抬过 10px 就是「设为全局」——那一瞬边框会变成紫色。
   </text>
 </svg>
