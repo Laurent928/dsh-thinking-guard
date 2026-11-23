@@ -61,6 +61,14 @@ Look at the last lines of each block; the escape is always the same shape:
 
 ## 2. The slider: five steps, cool to warm
 
+> [!WARNING]
+> **Raising the tier really does change model behaviour, and one tier writes a fake record into your session history.**
+>
+> - **Tier 3 (Cut fast) synthesizes a `get_goal` tool call** to push the turn forward. That record is **fake**, it stays in history, and the model can see it on the next step. Choosing it trades a clean history for not waiting. It is a deliberate trade-off, not a defect — stay at tier 2 or below if that is unacceptable.
+> - **Tier 4 (Abort) kills the turn outright**; you will see a failed-run message and that turn's work is lost.
+> - **Tier 2 (Cut slow) writes nothing fake**, but costs 7–21 seconds.
+> - The default, tier 1 (Tell), **does not touch the request at all** — it only adds a few dozen characters to the system prompt. Stay there if unsure.
+
 Five small segments at the right of the composer toolbar. Colour runs **cool → warm** as intervention strength rises:
 
 | Step | Colour | Name | What it does | Cost |
