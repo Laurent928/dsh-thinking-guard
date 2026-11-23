@@ -1,0 +1,16 @@
+{
+  "id": "dsh-external/dsh-thinking-guard",
+  "version": "0.1.0",
+  "main": "./src/index.js",
+  "description": "思考通道空转守卫：识别「做。/好。」式占位词循环，按强度提示、掐断或熔断；输入框工具条有一个 5 档滑条。",
+  "engines": {
+    "dsh": ">=0.2.0-rc.1 <0.3.0-0"
+  },
+  "contributes": {
+    "tools": [],
+    "skills": []
+  },
+  "client": {
+    "main": "./lib/client.js"
+  }
+}

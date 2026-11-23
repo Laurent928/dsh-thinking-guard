@@ -1,0 +1,8 @@
+# dsh-thinking-guard bundle patch：一行装配进 profile。
+#
+# 宿主半（src/index.js）注册系统提示段、agent/request 的 stop 与预算、
+# agent/pre-step 的判定，以及 /thinking-guard/state 回环路由；
+# 浏览器半（package.json 的 dsh.client）在输入框工具条注册强度滑条。
+- insert:
+    - id: thinking-guard
+      name: dsh-thinking-guard
