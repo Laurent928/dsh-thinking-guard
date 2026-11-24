@@ -204,13 +204,96 @@ test('悬停说明跟随系统语言', () => {
   assert.match(source, /a star would mean a lot/);
 });
 
-test('会打断的那两档，每次进去都要确认一次', () => {
-  assert.match(source, /if \(next >= 2\) \{ setAsk/);
-  assert.match(source, /我知道了/);
+test('会打断的那两档：给一行提示，但不弹窗拦人', () => {
+  assert.match(source, /var warnIfCutting = function/);
+  assert.match(source, /if \(next < 2\) return;/);
+  assert.match(source, /这一档会真的打断生成/);
   assert.doesNotMatch(source, /localStorage/, '不许把「不再提示」记进 localStorage');
+  // 弹窗会挡住换档（阿丞原话「我根本没法换挡」），确认改成不阻塞的一行提示
+  assert.doesNotMatch(source, /setAsk\(\{ next/);
 });
 
 test('求 star 那一行带可点链接', () => {
   assert.match(source, /https:\/\/github\.com\/Laurent928\/dsh-thinking-guard/);
   assert.match(source, /target: '_blank'/);
+});
+
+test('行为：按住往右拖 60px，真的会提交到第 3 档（换档不是摆设）', () => {
+  // 一个能跑 hooks 的最小 React 替身：状态改变就重渲染整棵组件
+  const React = (function () {
+    let slots = [];
+    let index = 0;
+    let rerender = null;
+    const api = {
+      createElement(type, props, children) { return { type, props: props || {}, children }; },
+      useState(init) {
+        const i = index++;
+        if (!(i in slots)) slots[i] = init;
+        const set = (v) => { slots[i] = typeof v === 'function' ? v(slots[i]) : v; if (rerender) rerender(); };
+        return [slots[i], set];
+      },
+      useRef(v) { const i = index++; if (!(i in slots)) slots[i] = { current: v }; return slots[i]; },
+      useCallback(fn) { index += 1; return fn; },
+      useEffect() { index += 1; },   // 桩里不跑副作用：否则 setInterval 会让进程挂着
+    };
+    api.__mount = (fn) => {
+      rerender = () => { index = 0; api.__tree = fn(); };
+      index = 0; api.__tree = fn();
+      return api;
+    };
+    api.__setRender = (fn) => { rerender = () => { index = 0; api.__tree = fn(); }; };
+    return api;
+  })();
+
+  const listeners = { pointermove: [], pointerup: [], pointercancel: [] };
+  const win = {
+    addEventListener(type, fn) { (listeners[type] || (listeners[type] = [])).push(fn); },
+    removeEventListener(type, fn) { listeners[type] = (listeners[type] || []).filter((f) => f !== fn); },
+  };
+  const posts = [];
+  const fetchStub = (url, opts) => {
+    if (opts && opts.method === 'POST') {
+      posts.push(JSON.parse(opts.body));
+      return Promise.resolve({ json: () => Promise.resolve({ ok: true, level: JSON.parse(opts.body).level, scope: 'session' }) });
+    }
+    return Promise.resolve({ json: () => Promise.resolve({ ok: true, level: 1, scope: 'session', max: 3 }) });
+  };
+
+  const g = globalThis;
+  const savedDoc = g.document;
+  g.document = { getElementById: () => null, createElement: () => ({}), head: { appendChild() {} } };
+  try {
+    let render = null;
+    const { exports } = loadViaModuleLoader(React, { window: win, fetch: fetchStub });
+    exports.apply({
+      inject(services, fn) {
+        fn({ slots: { inject(n, cb) { cb(); }, register(meta, r) { render = r; return { dispose() {} }; } } });
+      },
+    });
+
+    const element = render({ sessionId: 'sess-drag' });
+    React.__mount(() => element.type(element.props));
+
+    const findButton = (node) => {
+      if (!node || typeof node !== 'object') return null;
+      if (node.type === 'button') return node;
+      const kids = Array.isArray(node.children) ? node.children : (node.children ? [node.children] : []);
+      for (const k of kids) { const hit = findButton(k); if (hit) return hit; }
+      return null;
+    };
+    const button = findButton(React.__tree);
+    assert.ok(button, '应找到字形按钮');
+
+    button.props.onPointerDown({ clientX: 200, clientY: 200, button: 0, preventDefault() {} });
+    assert.equal(listeners.pointermove.length, 1, '按下后应挂上 window 级 pointermove');
+    listeners.pointermove[0]({ clientX: 260, clientY: 200 });
+    listeners.pointerup[0]({ clientX: 260, clientY: 200 });
+
+    assert.equal(posts.length, 1, '拖完应提交一次');
+    assert.equal(posts[0].level, 3, '起点是第 1 档，右拖 60px（步长 18）应到第 3 档');
+    assert.equal(posts[0].scope, 'session', '换档只作用本会话，不许自动变全局');
+    assert.equal(listeners.pointermove.length, 0, '抬手后要解绑 window 监听');
+  } finally {
+    g.document = savedDoc;
+  }
 });
