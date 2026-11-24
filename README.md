@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/promo-v4.svg" alt="它不是在思考，是卡住了" width="100%">
+  <img src="assets/promo-readme-zh.svg" alt="它不是在思考，是卡住了" width="100%">
 </p>
 
 <p align="center">
