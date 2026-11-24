@@ -289,8 +289,10 @@ test('光灭走外层透明度过渡，不能靠换 key 播一次性淡出', () 
   const g = source.match(/opacity: liveGlow \? '1' : '0',\s*\n\s*transition: liveGlow \? 'opacity 180ms ease-out' : 'opacity 340ms ease-out'/);
   assert.ok(g, '外层 group 应做 opacity 过渡');
   assert.ok(source.includes("transition: 'fill 180ms ease-out'"), '换色也要过渡');
-  // 呼吸动画必须在节点里常驻，不能因为显隐被重建
-  assert.match(source, /animation: 'rg-breathe-a ' \+ \(fast \? '0\.9s' : '2\.6s'\) \+ ' ease-in-out infinite'/);
+  // 呼吸动画必须在节点里常驻，不能因为显隐被重建（周期值可调，不锁死具体秒数）
+  assert.match(source, /animation: 'rg-breathe-a ' \+ \(fast \? '[0-9.]+s' : '[0-9.]+s'\) \+ ' ease-in-out infinite'/);
+  // 两层呼吸必须错开相位，否则会周期性一起亮/一起暗，看着像闪
+  assert.match(source, /animationDelay: '-[0-9.]+s'/);
 });
 
 test('描边只在拖动期间出现，平时不留框', () => {
