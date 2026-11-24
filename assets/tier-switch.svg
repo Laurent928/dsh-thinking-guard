@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 340" width="900" height="340" role="img" aria-label="点一下开关整理 · 左右拖换档位 · 按住往上划设全局">
   <style>
     text { font-family: 'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',system-ui,sans-serif; }
-    .cap { font-size: 17px; font-weight: 600; fill: #33404d; }
-    .sub { font-size: 13.5px; fill: #98a2ad; }
-    .scene { font-size: 15px; fill: #98a2ad; }
+    .cap { font-size: 15px; font-weight: 600; fill: #33404d; }
+    .sub { font-size: 12px; fill: #98a2ad; }
+    .scene { font-size: 13.5px; fill: #98a2ad; }
     .tag { font-size: 11px; font-weight: 600; }
   </style>
   <defs>
