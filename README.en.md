@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/banner-v3.svg" alt="dsh-thinking-guard" width="880">
+  <img src="assets/banner-v3.svg" alt="dsh-thinking-guard" width="100%">
 </p>
 
 <p align="center">
@@ -37,11 +37,11 @@
 ---
 
 <p align="center">
-  <img src="assets/promo-readme.png" alt="It is not thinking. It is stuck." width="880">
+  <img src="assets/promo-readme.png" alt="It is not thinking. It is stuck." width="100%">
 </p>
 
 <p align="center">
-  <img src="assets/head/sym.svg" alt="" width="880">
+  <img src="assets/head/sym.svg" alt="" width="100%">
 </p>
 
 ## 😵 The symptom
@@ -84,7 +84,7 @@ So "remind it not to loop" cannot work — it was already reminding itself. What
 ---
 
 <p align="center">
-  <img src="assets/head/why.svg" alt="" width="880">
+  <img src="assets/head/why.svg" alt="" width="100%">
 </p>
 
 ## 📜 Background: how this came about
@@ -112,7 +112,7 @@ Only after all that did I land on "count inside the stream and cut it" — and t
 ---
 
 <p align="center">
-  <img src="assets/head/what.svg" alt="" width="880">
+  <img src="assets/head/what.svg" alt="" width="100%">
 </p>
 
 ## 🛠 What it does
@@ -140,7 +140,7 @@ There is also one step that is **not on the slider** and always on: before a req
 ---
 
 <p align="center">
-  <img src="assets/head/install.svg" alt="" width="880">
+  <img src="assets/head/install.svg" alt="" width="100%">
 </p>
 
 ## 🚀 Install
@@ -170,17 +170,17 @@ Then add the package name to `dsh.profile.bundles` in that profile's `package.js
 ---
 
 <p align="center">
-  <img src="assets/head/slider.svg" alt="" width="880">
+  <img src="assets/head/slider.svg" alt="" width="100%">
 </p>
 
 ## 🎚 The five-step slider
 
 <p align="center">
-  <img src="assets/slider.svg" alt="five-step slider" width="880">
+  <img src="assets/slider.svg" alt="five-step slider" width="100%">
 </p>
 
 <p align="center">
-  <img src="assets/drag.svg" alt="dragging the slider through the tiers" width="880">
+  <img src="assets/drag.svg" alt="dragging the slider through the tiers" width="100%">
 </p>
 
 - **Collapsed**, only the current step is drawn. Press, drag, or focus to expand the whole track
@@ -191,7 +191,7 @@ Then add the package name to `dsh.profile.bundles` in that profile's `package.js
 ---
 
 <p align="center">
-  <img src="assets/head/how.svg" alt="" width="880">
+  <img src="assets/head/how.svg" alt="" width="100%">
 </p>
 
 ## 🧠 Why it works
@@ -248,7 +248,7 @@ So the plugin leaves you alone by default, and only moves at that moment
 ---
 
 <p align="center">
-  <img src="assets/head/cfg.svg" alt="" width="880">
+  <img src="assets/head/cfg.svg" alt="" width="100%">
 </p>
 
 ## ⚙️ Configuration
