@@ -189,7 +189,7 @@
 ## 🎚 那颗字形
 
 <p align="center">
-  <img src="assets/tier-switch.svg" alt="档位：灰圆 → 绿圆 → 黄三角 → 红方，点一下加一档" width="880">
+  <img src="assets/tier-switch.svg" alt="点一下开关整理、左右拖换档位、往上划设全局" width="100%">
 </p>
 
 <p align="center">
