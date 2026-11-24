@@ -78,7 +78,7 @@ const DEFAULTS = {
    * 防的是「正常步骤恰好尾部有十几行短行」——正常步骤的思考通常只有几百字符，
    * 退化才会上千。也顺带保证不会为了省几百字符去中断一个本来很短的步骤。
    */
-  streamKillMinChars: 1000,
+  streamKillMinChars: 600,
   /** 流内掐断总开关。 */
   streamKillEnabled: true,
   /** 试运行：只记「本该掐」的日志，不真掐。用来验证判据。 */
