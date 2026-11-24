@@ -36,6 +36,10 @@
 ---
 
 <p align="center">
+  <img src="assets/promo-readme.png" alt="它不是在思考，是卡住了" width="880">
+</p>
+
+<p align="center">
   <img src="assets/head/sym.svg" alt="" width="880">
 </p>
 

@@ -37,6 +37,10 @@
 ---
 
 <p align="center">
+  <img src="assets/promo-readme.png" alt="It is not thinking. It is stuck." width="880">
+</p>
+
+<p align="center">
   <img src="assets/head/sym.svg" alt="" width="880">
 </p>
 
