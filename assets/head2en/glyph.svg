@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="92" viewBox="0 0 880 92" role="img" aria-label="The glyph">
+  <style>
+    .tx { font-family: ui-monospace,SFMono-Regular,Consolas,monospace; font-size: 10px; fill: #9da0a8; opacity: 0.22; white-space: pre; }
+    .t { font-family: 'PingFang SC','Hiragino Sans GB','Microsoft YaHei',Helvetica,Arial,sans-serif; font-size: 22px; font-weight: 700; fill: #243040; }
+    .s { font-family: 'PingFang SC','Hiragino Sans GB','Microsoft YaHei',Helvetica,Arial,sans-serif; font-size: 12.5px; fill: #98a2ad; }
+  </style>
+  <rect width="880" height="92" rx="10" fill="#ffffff"/>
+<text x="0" y="14" class="tx" xml:space="preserve" textLength="880" lengthAdjust="spacing">       :                  : |    +         + ,       ~             ;        *   ,       </text>
+<text x="0" y="26" class="tx" xml:space="preserve" textLength="880" lengthAdjust="spacing">  ^ \| :            ..              ~  :                                        .       </text>
+<text x="0" y="38" class="tx" xml:space="preserve" textLength="880" lengthAdjust="spacing"> #        &amp;        %        -    =-   |-                           ~%                  .</text>
+<text x="0" y="50" class="tx" xml:space="preserve" textLength="880" lengthAdjust="spacing">   , ~        =   #     &amp;  |#   ~   @     %              / %  *        ^          /     </text>
+<text x="0" y="62" class="tx" xml:space="preserve" textLength="880" lengthAdjust="spacing"> $                 +%   *    %              ^    ,         : \%       %        $^       </text>
+<text x="0" y="74" class="tx" xml:space="preserve" textLength="880" lengthAdjust="spacing">          $  ^                  #              :|      *   ,                  \       | </text>
+<text x="0" y="86" class="tx" xml:space="preserve" textLength="880" lengthAdjust="spacing">|  \     .         .                    ,    +                     ; &amp;#   *            ~</text>
+  <text x="34" y="58" class="t">The glyph</text>
+  <text x="34" y="76" class="s">colour covers cleaning, shape covers cutting</text>
+</svg>

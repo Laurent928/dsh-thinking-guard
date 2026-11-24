@@ -6,8 +6,8 @@
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-2dd4bf"></a>
   <a href="package.json"><img alt="Node" src="https://img.shields.io/badge/node-%3E%3D20-60a5fa"></a>
   <a href="package.json"><img alt="DSH" src="https://img.shields.io/badge/DSH-%E2%89%A50.2.0--rc.1-a78bfa"></a>
-  <img alt="tests" src="https://img.shields.io/badge/tests-65%20passing-4ade80">
-  <img alt="version" src="https://img.shields.io/badge/version-0.3.0-f59e0b">
+  <img alt="tests" src="https://img.shields.io/badge/tests-70%20passing-4ade80">
+  <img alt="version" src="https://img.shields.io/badge/version-2.0.0-f59e0b">
 </p>
 
 <p align="center">
@@ -29,11 +29,19 @@
 </p>
 
 <p align="center">
+  <b>What 2.0 changes</b>: the focus moved from <b>how to cut the loop</b> to
+  <b>how to fix it without cutting at all</b>.<br>
+  The harshest tier (fuse: kill the whole turn) is gone, and the default flipped from
+  "cut slow" to <b>"clean"</b> — lossless stripping that <b>never interrupts</b>.<br>
+  <sub>The tiers also changed shape: one glyph, <b>colour = cleaning on/off, shape = how hard it hits</b> (circle → triangle → square).</sub>
+</p>
+
+<p align="center">
   <a href="#-the-symptom">Symptom</a> ·
   <a href="#-background-how-this-came-about">Background</a> ·
   <a href="#-what-it-does">What it does</a> ·
   <a href="#-install">Install</a> ·
-  <a href="#-the-five-step-slider">Slider</a> ·
+  <a href="#-the-glyph">Tiers</a> ·
   <a href="#-why-it-works">Why</a> ·
   <a href="#-configuration">Config</a>
 </p>
@@ -199,23 +207,24 @@ Then add the package name to `dsh.profile.bundles` in that profile's `package.js
 ---
 
 <p align="center">
-  <img src="assets/head2en/slider.svg" alt="" width="100%">
+  <img src="assets/head2en/glyph.svg" alt="The glyph" width="100%">
 </p>
 
-## 🎚 The five-step slider
+## 🎚 The glyph
 
 <p align="center">
-  <img src="assets/slider2-en.svg" alt="five-step slider" width="100%">
+  <img src="assets/tier-switch-en.svg" alt="tiers: grey circle → green circle → amber triangle → red square" width="100%">
 </p>
 
 <p align="center">
-  <img src="assets/drag2-en.svg" alt="dragging the slider through the tiers" width="100%">
+  <sub>Click to step up; drag sideways to change shape. <b>Colour = cleaning on/off, shape = how hard it hits.</b></sub>
 </p>
 
-- **Collapsed**, only the current step is drawn. Press, drag, or focus to expand the whole track
-- **Glow** means "this conversation was set by hand", and it is always the tier colour. Inherited values stay quiet
-- The outline turns **violet** while you are dragging. Pull **up past 10px** to lock the value globally
-- From tier 2 upward, a warning explains what that tier does and what it costs
+- **Click**: toggles colour, i.e. toggles history cleaning — green = working, grey = not cleaning
+- **Drag sideways**: changes the shape, i.e. the tier (circle → triangle → square), one step per 26px
+- **Colour covers cleaning, shape covers cutting** — two channels, one job each, readable at a glance
+- The two cutting tiers (triangle / square) **ask for confirmation every time** you enter them
+- Hover shows an explanation in your system language
 
 ---
 
