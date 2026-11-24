@@ -137,16 +137,23 @@ test('渲染：一颗字形按钮，带可读的档位名', () => {
   const button = node.children.find((c) => c && c.type === 'button');
   assert.ok(button, '应有一个 button');
   assert.match(button.props['aria-label'], /整理|Clean|关|Off/);
-  // 按钮里现在有呼吸光、紫环、字形三层，字形是那个 svg
   const kid = Array.isArray(button.children) ? button.children : [button.children];
-  const svg = kid.find((c) => c && c.type === 'svg');
+  // 字形外面包了一层 span（为了挂 pop 动画），要递归找 svg
+  const findSvg = (node) => {
+    if (!node || typeof node !== 'object') return null;
+    if (node.type === 'svg') return node;
+    const kids = Array.isArray(node.children) ? node.children : (node.children ? [node.children] : []);
+    for (const k of kids) { const hit = findSvg(k); if (hit) return hit; }
+    return null;
+  };
+  const svg = findSvg({ type: 'root', children: kid });
   assert.ok(svg, '应有一个 svg 字形');
   assert.equal(svg.props.viewBox, '0 0 24 24');
   // 默认档是「整理」：绿色实心圆
   assert.equal(svg.children.type, 'circle');
   assert.equal(svg.children.props.fill, '#5d9c83');
-  // 呼吸光用本档色
-  const glow = kid.find((c) => c && c.type === 'span');
+  // 呼吸光用本档色，且挂的是呼吸动画
+  const glow = kid.find((c) => c && c.type === 'span' && c.props && c.props.style && c.props.style.animation);
   assert.ok(glow && /tg-breathe/.test(glow.props.style.animation), '呼吸光动画应挂上');
 });
 
@@ -168,7 +175,8 @@ test('每档都有中英两句说明，长过档位名', () => {
 
 test('两个通道分开写：颜色管整理、形状管档位', () => {
   assert.match(source, /shape: 'circle'[\s\S]*?shape: 'circle'[\s\S]*?shape: 'triangle'[\s\S]*?shape: 'square'/, '形状顺序应是 圆→圆→三角→方');
-  assert.match(source, /点一下：开关颜色|点一下/);
+  assert.match(source, /短按＝开关颜色/);
+  assert.doesNotMatch(source, /d\.base \+ Math\.round\(d\.dx \/ STEP_PX\)/, '拖动不该按绝对档位算（会把颜色也拖掉）');
 });
 
 test('轮询宿主状态，不靠刷新页面', () => {
