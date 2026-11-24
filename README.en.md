@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/promo-readme.png" alt="It is not thinking. It is stuck." width="100%">
+  <img src="assets/promo-readme-en.svg" alt="It is not thinking. It is stuck." width="100%">
 </p>
 
 <p align="center">
