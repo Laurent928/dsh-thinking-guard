@@ -1,8 +1,4 @@
 <p align="center">
-  <img src="assets/banner-v3.svg" alt="dsh-thinking-guard" width="100%">
-</p>
-
-<p align="center">
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-2dd4bf"></a>
   <a href="package.json"><img alt="Node" src="https://img.shields.io/badge/node-%3E%3D20-60a5fa"></a>
   <a href="package.json"><img alt="DSH" src="https://img.shields.io/badge/DSH-%E2%89%A50.2.0--rc.1-a78bfa"></a>
@@ -184,7 +180,7 @@ Then add the package name to `dsh.profile.bundles` in that profile's `package.js
 </p>
 
 <p align="center">
-  <img src="assets/drag.svg" alt="dragging the slider through the tiers" width="100%">
+  <img src="assets/drag2.svg" alt="dragging the slider through the tiers" width="100%">
 </p>
 
 - **Collapsed**, only the current step is drawn. Press, drag, or focus to expand the whole track

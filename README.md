@@ -1,8 +1,4 @@
 <p align="center">
-  <img src="assets/banner-v3.svg" alt="dsh-thinking-guard" width="100%">
-</p>
-
-<p align="center">
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-2dd4bf"></a>
   <a href="package.json"><img alt="Node" src="https://img.shields.io/badge/node-%3E%3D20-60a5fa"></a>
   <a href="package.json"><img alt="DSH" src="https://img.shields.io/badge/DSH-%E2%89%A50.2.0--rc.1-a78bfa"></a>
@@ -168,7 +164,7 @@
 </p>
 
 <p align="center">
-  <img src="assets/drag.svg" alt="拖动滑条切换五档" width="100%">
+  <img src="assets/drag2.svg" alt="拖动滑条切换五档" width="100%">
 </p>
 
 - **收起**时只画当前那一格，不占地方；**按下 / 拖动 / 键盘聚焦**才展开成整条
