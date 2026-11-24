@@ -2,6 +2,38 @@
 
 按 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 组织，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [0.3.0] - 2026-11-24
+
+这一版把「治本」那一刀真正接上了——以前它根本没生效。
+
+### 修复
+
+- **历史消毒此前是空转的**：代码靠 `options.messages = ...` 改历史，而 `options` 是深冻结的，
+  赋值抛错被 `try/catch` 吞成一行 trace。实测从装上到现在，成功和失败各 0 次——等于从没工作过。
+  现在改成克隆一个新 `options`、从 `this.streamWithRegistration()` 重新发起（cordis 的 waterfall
+  会把回调绑到 LlmRuntime 上，中间件里的 `this` 正好能接住），并打 `Symbol.for('dsh.thinking-guard.scrubbed')`
+  记号防二次消毒、防无限重发。
+
+### 新增
+
+- **「只摘填充、留正文」的剥离模式**（`scrubMode: 'strip'`，默认）：把「做。/好。/嗯。」这类整行剔掉，
+  其余逐行保留。实测两个真实会话：按行算 29.2% 是占位行，按字符算只占 4.6%，
+  剥完保留 **91.8%** 的推理内容；另一个会话保留 **96.5%**。
+- **相邻对重复判据**（`streamKillRepeatEnabled`）：同一对相邻行重复 ≥8 次且占位行 ≥15% 才动手。
+  全库 16,739 块试算：命中 172 块，49 块真死循环全中，某个正常会话的 279 块零误伤。
+- **冷却窗**（`cooldownWindowMs/Hits/Ms`）：10 分钟内掐满 3 次就歇 5 分钟，只放行不掐。
+- **掐断补偿**（`compensate*`）：掐断时把被掐段最后几句真实内容带进注入提示，免得模型下一轮两眼一抹黑。
+- **运行时开关**（`~/.dsh/thinking-guard-switches.json`）：`{"scrub": false}` 关、`{"scrub": true}` 开。
+  按 mtime 缓存，改完下一次请求就生效，**不用重启**——方便在同一个会话里做开/关 A/B。
+
+### 变更
+
+- **密度判据默认关**（`streamKillDensityEnabled: false`）。它按「行的个数」算占比，而一行的「做。」
+  只有 2 个字：真机上 26% 的行只占 3% 的字，21 分钟误掐 11 次正常思考；全库看它单独多抓 199 块、
+  真死循环 0 块。
+- `streamKillMinChars` 600 → 150：真实事故块连续短行到 15 行时只有 235 字符。
+- 单测 54 → 65。
+
 ## [Unreleased]
 
 有人在朋友机器上双击 `install.cmd`，窗口吐出一串看不懂的错。查下来不止一个问题。

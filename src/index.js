@@ -18,7 +18,7 @@
 import { isLoopback, readJson, sendJson } from './route.js';
 import fs from 'node:fs';
 import { randomUUID } from 'node:crypto';
-import { dshHome, clearSessionLevel, effectiveLevel, normalizeId, readGlobal, writeGlobal, writeSessionLevel } from './state.js';
+import { dshHome, clearSessionLevel, effectiveLevel, normalizeId, readGlobal, readSwitch, writeGlobal, writeSessionLevel } from './state.js';
 
 /** Cordis 插件名。 */
 export const name = 'thinking-guard';
@@ -76,10 +76,50 @@ const DEFAULTS = {
   /**
    * 流内掐断的字符数下限：思考没超过这么多字符就不掐。
    *
-   * 防的是「正常步骤恰好尾部有十几行短行」——正常步骤的思考通常只有几百字符，
-   * 退化才会上千。也顺带保证不会为了省几百字符去中断一个本来很短的步骤。
+   * 2026-11-24 从 600 降到 150：真实事故块（19:11 那块）run 到 15 行时累计只有 235 字符，
+   * 600 的门槛把它整个放过去了（等字数够时连续短行已被长行打断，判定条件再也不会同时成立）。
    */
-  streamKillMinChars: 600,
+  streamKillMinChars: 150,
+  /**
+   * 占位密度判据：整段思考里「占位行」占比够高就掐，不看连续性。
+   *
+   * **2026-11-24 夜起默认关**：它按「行的个数」算占比，而一行的「做。」只有 2 个字——
+   * 真机上 26% 的行只占 3% 的字。game 会话 21 分钟被砍 11 次正常思考；
+   * 全库看密度单独多抓 199 块、真正的死循环 0 块。主力换成下面的 streamKillRepeat*。
+   */
+  streamKillDensityEnabled: false,
+  /** 至少要有这么多行才看密度（行数太少时占比没有意义）。 */
+  streamKillDensityMinLines: 30,
+  /** 占位行占比达到这个值就判（0.25 = 25%）。 */
+  streamKillDensityRatio: 0.25,
+  /**
+   * 相邻对重复判据（2026-11-24 夜起的主力）：同一对相邻行重复够多次、且占位行占比够高，就掐。
+   *
+   * 为什么换成它：真死循环的形状是「好。→做。」这种同一对行反复（全库 49 块，重复 8–259 次），
+   * 而风格性的填充行只是散着插，重复对涨不上去。全库试算（16739 块）：
+   * 重复对≥8 且占位行≥15% → 命中 172 块、49 块真死循环全中、game 会话 279 块零误伤
+   * （旧密度判据误伤 23 块、全库多抓 199 块而真死循环 0）。
+   */
+  streamKillRepeatEnabled: true,
+  /** 同一对相邻行至少重复这么多次才开始看（8 次约等于 16 行）。 */
+  streamKillRepeatMin: 8,
+  /** 同时要求占位行占比达到这个值，避免把贴代码/贴表格的重复也算进来。 */
+  streamKillRepeatRatioMin: 0.15,
+  /** 少于这么多行不看重复对（行数太少时重复次数没有统计意义）。 */
+  streamKillRepeatMinLines: 20,
+  /**
+   * 冷却：同一会话在 cooldownWindowMs 内被掐到 cooldownHits 次，就歇 cooldownMs 再掐。
+   *
+   * 为什么不用 maxKillStreak：那个「连续计数」被 `if (!killed) killStreak.delete(key)` 清零，
+   * 实测 11 次掐断里 10 次 streak=1，刹车一次都没触发过。时间窗才刹得住。
+   */
+  cooldownWindowMs: 600000,
+  cooldownHits: 3,
+  cooldownMs: 300000,
+  /** 掐断补偿：把被掐掉那段思考里最后几句真实内容带进注入提示。 */
+  compensateEnabled: true,
+  compensateMaxLines: 3,
+  compensateMaxChars: 240,
   /** 流内掐断总开关。 */
   streamKillEnabled: true,
   /** 试运行：只记「本该掐」的日志，不真掐。用来验证判据。 */
@@ -94,6 +134,15 @@ const DEFAULTS = {
    * 只动 assistant 的 reasoning 块，正文与工具调用一概不碰。
    */
   scrubDegenerateHistory: true,
+  /** 历史消毒的做法：strip = 把「好。/嗯。」这类占位行整行剔掉、正文留着（默认）；squash = 整块换成一句省略标记。 */
+  scrubMode: 'strip',
+  /** strip 模式下，一块里至少要剔掉这么多行才动手。 */
+  scrubStripMinDropped: 5,
+  /**
+   * 改过的 messages 怎么送出去：redispatch = 克隆一个新 options 重新发起请求（能绕开深冻结）；
+   * inplace = 原地改 options.messages（options 冻结时会抛错，只留作对照）。
+   */
+  scrubStrategy: 'redispatch',
   /** 被掐断后，下一步给模型的一句提示（空字符串 = 不提示）。 */
   afterKillText: '你上一步在思考里重复写「做。/好。」被截断了，那条思路没走完。别重新推一遍，直接做你上一步已经决定的事。',
   /** 连续掐断太多次就先停手，免得陷入「掐→重想→再掐」的死循环（0 = 不限）。 */
@@ -124,23 +173,79 @@ const DEFAULTS = {
  * @param cfg - 判据配置。
  * @returns 改后的新数组与被清掉的块数。
  */
+/** 历史消毒里「转发」用的记号：打过标就不重复消毒，避免无限重发。 */
+const SCRUB_MARK = Symbol.for('dsh.thinking-guard.scrubbed');
+
+/** 一行是不是纯占位（「做。」「好。」「嗯。」这类没有宾语的过渡行）。 */
+export function isPlaceholderLine(line) {
+  const text = String(line).trim();
+  if (!text) return false;
+  return MARK_LINE.test(text) || (text.length <= 4 && /^嗯[，,。]?$/.test(text));
+}
+
+/**
+ * 把一段思考里的占位行整行剔掉，正文一字不动。
+ *
+ * 为什么剔而不是整块删：占位行是模型模仿自己的源头，正文是它真想过的东西。
+ * 整块删会连带把有用的推理一起扔掉，模型下一轮只能从头再想一遍。
+ * @param text - 原始 reasoning 文本。
+ * @returns 剔完的文本与被剔掉的行数。
+ */
+export function stripPlaceholderLines(text) {
+  const lines = String(text).split('\n');
+  const kept = [];
+  let dropped = 0;
+  for (const raw of lines) {
+    const trimmed = raw.trim();
+    if (trimmed && isPlaceholderLine(trimmed)) { dropped += 1; continue; }
+    kept.push(raw);
+  }
+  let out = kept.join('\n');
+  while (out.indexOf('\n\n\n') >= 0) out = out.split('\n\n\n').join('\n\n');
+  return { text: out.trim(), dropped };
+}
+
+/**
+ * 历史消毒：把已经退化的 reasoning 从这一轮的输入里改掉。
+ *
+ * 依据（DSH 官方 Discussion #7270）：退化的思考会被 serialize.ts 逐轮回传进后续每一轮输入，
+ * 模型倾向于模仿自己刚才的模式 → 自我强化。掐断只管这一轮，改历史才是治本。
+ *
+ * 两种模式：strip（默认）只剔占位行、保留正文；squash 整块换成一句省略标记。
+ * 只动 assistant 的 reasoning 块，正文与工具调用一概不碰。
+ * @param messages - 即将发给 provider 的消息数组（GenerateOptions.messages）。
+ * @param cfg - 判据配置。
+ * @returns 改后的新数组、被省略的块数、被剔掉的行数。
+ */
 export function scrubDegenerateReasoning(messages, cfg) {
-  if (!Array.isArray(messages)) return { messages, removed: 0 };
+  if (!Array.isArray(messages)) return { messages, removed: 0, stripped: 0 };
+  const mode = cfg?.scrubMode ?? 'strip';
+  const minDropped = Math.max(1, cfg?.scrubStripMinDropped ?? 5);
   let removed = 0;
+  let stripped = 0;
   const next = messages.map((message) => {
     if (message?.role !== 'assistant' || !Array.isArray(message.content)) return message;
     let touched = false;
     const content = message.content.map((block) => {
       if (block?.type !== 'reasoning' || typeof block.text !== 'string') return block;
+      if (mode === 'strip') {
+        const { text, dropped } = stripPlaceholderLines(block.text);
+        if (dropped < minDropped) return block;
+        touched = true;
+        stripped += dropped;
+        if (text.length > 0) return { ...block, text };
+        removed += 1;
+        return { ...block, text: '（上一段思考陷入重复 ' + dropped + ' 行占位，已省略）' };
+      }
       const metrics = measure(block.text.split('\n'));
       if (!isDegraded(metrics, cfg)) return block;
       touched = true;
       removed += 1;
-      return { ...block, text: `（上一段思考陷入重复 ${metrics.markRun} 行，已省略）` };
+      return { ...block, text: '（上一段思考陷入重复 ' + metrics.markRun + ' 行，已省略）' };
     });
     return touched ? { ...message, content } : message;
   });
-  return { messages: removed > 0 ? next : messages, removed };
+  return { messages: removed + stripped > 0 ? next : messages, removed, stripped };
 }
 
 /** 无宾语的执行意图词，整行只有它自己。 */
@@ -153,6 +258,32 @@ const MARK_LINE = /^[（(]?(做|好|写|输出|调用|执行|看|停|嗯|走|来
  * 实测正常块里连续短行最长只有几行，15 连是安全的。
  */
 const SHORT_LINE = /^[（(]?[^（()）\n]{1,6}[。，、]?[。）)]?$/;
+
+/**
+ * 掐断补偿：从被截断的思考里挑最后几句「有内容」的行，拼成一句可注入的话。
+ *
+ * 掐断本身不是问题，问题是模型下一轮看不到自己刚才想到哪，只能从头再推一遍——
+ * 而重推的过程又会长出新的填充行。把最后几句真实内容还给它，能省掉这一轮。
+ * @param lines - 已经切好的整行数组。
+ * @param cfg - 判据配置。
+ * @returns 拼好的短句；没有可用行时返回空字符串。
+ */
+export function buildCompensation(lines, cfg) {
+  if (!cfg?.compensateEnabled || !Array.isArray(lines)) return "";
+  const maxLines = Math.max(1, cfg.compensateMaxLines ?? 3);
+  const maxChars = Math.max(20, cfg.compensateMaxChars ?? 240);
+  const picked = [];
+  for (let i = lines.length - 1; i >= 0 && picked.length < maxLines; i--) {
+    const line = lines[i];
+    if (!line || line.length <= 4 || line.length > 80) continue;
+    if (MARK_LINE.test(line)) continue;
+    picked.unshift(line);
+  }
+  if (picked.length === 0) return "";
+  let text = picked.join(" / ");
+  if (text.length > maxChars) text = text.slice(0, maxChars) + "…";
+  return text;
+}
 
 /** 只保留尾部这么多字符做实时判断，避免每次全量扫描。 */
 const TAIL_CHARS = 400;
@@ -266,6 +397,30 @@ export function apply(ctx, config = {}) {
   const killedSessions = new Map();
   /** 连续被掐次数：sid -> n。用来在死循环出现前自己踩刹车。 */
   const killStreak = new Map();
+  /** 冷却截止时间：sid -> epoch ms。 */
+  const cooldowns = new Map();
+  /** 每次掐断的时间戳：sid -> number[]，用来数时间窗里的次数。 */
+  const killTimes = new Map();
+  /**
+   * 记一次掐断，窗口内够次数就进冷却。
+   *
+   * 为什么不用 maxKillStreak：那个「连续计数」被 `if (!killed) killStreak.delete(key)` 清零，
+   * 实测 11 次掐断里 10 次 streak=1，刹车一次没触发过。时间窗才刹得住。
+   */
+  const recordKill = (key) => {
+    const now = Date.now();
+    const windowMs = Math.max(0, cfg.cooldownWindowMs ?? 0);
+    const list = (killTimes.get(key) ?? []).filter((t) => now - t <= windowMs);
+    list.push(now);
+    killTimes.set(key, list);
+    if (cfg.cooldownHits > 0 && list.length >= cfg.cooldownHits) {
+      const coolMs = Math.max(0, cfg.cooldownMs ?? 0);
+      cooldowns.set(key, now + coolMs);
+      killTimes.delete(key);
+      log(`冷却：本会话 ${Math.round(windowMs / 1000)}s 内掐了 ${list.length} 次，接下来 ${Math.round(coolMs / 1000)}s 只放行不掐`);
+      trace(`冷却开始 ${Math.round(coolMs / 1000)}s`);
+    }
+  };
   /**
    * 各会话的 agent 引用。掐断后要靠它主动续一轮——没有工具调用的 stop 会让这一轮
    * 直接结束，用户必须再开口；用 agent.followup 投一条消息就能自动接上。
@@ -360,12 +515,15 @@ export function apply(ctx, config = {}) {
         .replace(/\{run\}/g, String(killedInfo.run))
         .replace(/\{chars\}/g, String(killedInfo.chars));
       trace(`注入掐断提示 sid=${String(sid).slice(0, 16)} run=${killedInfo.run}`);
-      if (notice.length > 0) {
+      const finalNotice = killedInfo.hint
+        ? notice + " 你刚才想到的：" + killedInfo.hint + " 别再重推，直接动手。"
+        : notice;
+      if (finalNotice.length > 0) {
         return {
           ...decision,
           messages: [...(decision.messages ?? []), {
             role: 'user',
-            content: [{ type: 'text', text: notice }],
+            content: [{ type: 'text', text: finalNotice }],
             source: { kind: 'plugin:' + name },
           }],
         };
@@ -414,20 +572,40 @@ export function apply(ctx, config = {}) {
       const lv0 = levelFor(sid0);
       trace(`stream 进入 purpose=${options?.purpose ?? '-'} sid=${String(sid0).slice(0, 16)} level=${lv0}`);
 
-      // ⓪ 治本一步：把历史上已经退化的 reasoning 从这一轮的输入里摘掉。
+      // ⓪ 治本一步：把历史里已经退化的 reasoning 从这一轮的输入里改掉。
       //    退化的思考会被逐轮回传，模型模仿自己 → 自我强化；不摘就会一直喂它垃圾。
-      //    options 是 next() 闭包里捕获的同一个对象，改它等于改即将发出的请求。
-      if (cfg.scrubDegenerateHistory && lv0 >= 1 && options && typeof options === 'object') {
+      //    options 是深冻结的，原地改会抛错（以前就是这么静默失效的）；
+      //    改成克隆一个新的 options 再从 this.streamWithRegistration 发起——
+      //    cordis 的 waterfall 会把回调绑到 LlmRuntime 上，所以这里的 this 就是它。
+      const scrubOn = readSwitch('scrub') ?? cfg.scrubDegenerateHistory;
+      if (scrubOn && lv0 >= 1 && options && typeof options === 'object' && !options[SCRUB_MARK]) {
         try {
           const before = options.messages;
           const scrubbed = scrubDegenerateReasoning(before, cfg);
-          if (scrubbed.removed > 0 && scrubbed.messages !== before) {
-            options.messages = scrubbed.messages;
-            trace(`清掉 ${scrubbed.removed} 段退化思考（历史消毒）`);
-            log(`从上下文里摘掉 ${scrubbed.removed} 段退化思考`);
+          const changed = (scrubbed.removed > 0 || scrubbed.stripped > 0) && scrubbed.messages !== before;
+          let forwarded = false;
+          if (changed && cfg.scrubStrategy === 'redispatch' && this && typeof this.streamWithRegistration === 'function') {
+            const cloned = { ...options, messages: scrubbed.messages };
+            Object.defineProperty(cloned, SCRUB_MARK, { value: true });
+            let stream = this.streamWithRegistration(cloned);
+            if (stream && typeof stream.then === 'function') stream = await stream;
+            if (stream && typeof stream[Symbol.asyncIterator] === 'function') {
+              trace('历史消毒（转发）：剔掉 ' + scrubbed.stripped + ' 行占位、省略 ' + scrubbed.removed + ' 段');
+              log('从上下文里剔掉 ' + scrubbed.stripped + ' 行占位、省略 ' + scrubbed.removed + ' 段退化思考');
+              yield* stream;
+              return;
+            }
+            trace('历史消毒转发没拿到可迭代的流，退回原地改');
           }
+          if (changed) {
+            options.messages = scrubbed.messages;
+            trace('清掉 ' + scrubbed.removed + ' 段、剔掉 ' + scrubbed.stripped + ' 行（历史消毒·原地改）');
+            log('从上下文里摘掉 ' + scrubbed.removed + ' 段退化思考');
+            forwarded = true;
+          }
+          if (!forwarded && !changed) trace('历史消毒：这一轮没有要清的退化块');
         } catch (error) {
-          trace(`历史消毒失败 ${String(error)}`);
+          trace('历史消毒失败 ' + String(error));
         }
       }
 
@@ -462,28 +640,85 @@ export function apply(ctx, config = {}) {
       let maxRun = 0;
       let maxIndex = -1;
       let killed = false;
+      // 密度判据的累加器：把流里的完整行攒起来，统计「占位行」占比
+      let pendingLine = '';
+      const recentLines = [];
+      let placeLines = 0;
+      // 相邻对重复：判据换代后的主力信号（同一对行反复，才是死循环的形状）
+      let pairMax = 0;
+      let pairKey = "";
+      const pairCounts = new Map();
+      const isPlaceholder = (line) => MARK_LINE.test(line) || (line.length <= 4 && /^嗯[，,。]?$/.test(line));
+      // 冷却：本会话短时间内掐太多次就先收手，别把正常会话砍成筛子
+      const cooling = (cooldowns.get(key) ?? 0) > Date.now();
+      if (cooling) trace("冷却中，本次只放行不掐 sid=" + String(sid).slice(0, 16));
       for await (const chunk of next()) {
         if (typeof chunk?.index === 'number' && chunk.index > maxIndex) maxIndex = chunk.index;
         if (chunk?.type === 'reasoning-delta' && typeof chunk.text === 'string') {
           chars += chunk.text.length;
           deltaCount++;
           tail = (tail + chunk.text).slice(-TAIL_CHARS);
+          // —— 密度累加：按换行切出完整行 ——
+          pendingLine += chunk.text;
+          let nl = pendingLine.indexOf('\n');
+          while (nl >= 0) {
+            const line = pendingLine.slice(0, nl).trim();
+            pendingLine = pendingLine.slice(nl + 1);
+            if (line) {
+              if (recentLines.length > 0) {
+                const prev = recentLines[recentLines.length - 1];
+                const pk = prev + "|" + line;
+                const seen = (pairCounts.get(pk) ?? 0) + 1;
+                pairCounts.set(pk, seen);
+                if (seen > pairMax) {
+                  pairMax = seen;
+                  pairKey = prev + " / " + line;
+                }
+              }
+              recentLines.push(line);
+              if (isPlaceholder(line)) placeLines++;
+            }
+            nl = pendingLine.indexOf('\n');
+          }
           const run = trailingShortRun(tail);
           if (run > maxRun) {
             maxRun = run;
             if (run === 8) trace(`连续短行到 8 行（累计 ${chars} 字符），继续观察`);
           }
+          const placeRatio = recentLines.length > 0 ? placeLines / recentLines.length : 0;
+          const repeatHit =
+            cfg.streamKillRepeatEnabled &&
+            recentLines.length >= cfg.streamKillRepeatMinLines &&
+            pairMax >= cfg.streamKillRepeatMin &&
+            placeRatio >= cfg.streamKillRepeatRatioMin &&
+            chars >= minChars;
+          const densityHit =
+            cfg.streamKillDensityEnabled &&
+            recentLines.length >= cfg.streamKillDensityMinLines &&
+            placeRatio >= cfg.streamKillDensityRatio &&
+            chars >= minChars;
+          const shortHit = run >= runThreshold && chars >= minChars;
           const forceHit = forceChars > 0 && chars >= forceChars;
-          if (forceHit || (run >= runThreshold && chars >= minChars)) {
+          if (forceHit || (!cooling && (repeatHit || densityHit || shortHit))) {
+            const why = forceHit
+              ? '强制'
+              : repeatHit
+                ? '重复对 ' + pairMax + ' 次「' + pairKey + '」占位 ' + Math.round(placeRatio * 100) + '%'
+                : densityHit
+                  ? `密度 ${placeLines}/${recentLines.length}`
+                  : `连续 ${run} 行`;
             if (cfg.streamKillDryRun) {
-              log(`[试运行] 该掐了：连续短行 ${run} 行，已生成 ${chars} 字符`);
-              trace(`试运行命中 run=${run} chars=${chars}`);
+              log(`[试运行] 该掐了：${why}，已生成 ${chars} 字符`);
+              trace(`试运行命中 ${why} chars=${chars}`);
               tail = '';
             } else {
               killed = true;
-              log(`掐流：连续短行 ${run} 行，在 ${chars} 字符处收手${forceHit ? '（测试钩子强制）' : ''}`);
-              trace(`掐流命中 run=${run} chars=${chars} streak=${streakBefore + 1}${forceHit ? ' force=true' : ''}`);
+              log(`掐流：${why}，在 ${chars} 字符处收手`);
+              trace(`掐流命中 ${why} chars=${chars} streak=${streakBefore + 1}`);
               killStreak.set(key, streakBefore + 1);
+              recordKill(key);
+              const hint = buildCompensation(recentLines, cfg);
+              if (hint) trace("掐断补偿：" + hint);
 
               // 快速续轮：伪造一个只读工具调用，把 finish 改成 tool-calls。
               // 这一轮于是不会结束，直接进下一步（延迟 <1s），下一步的 pre-step 再注入提示。
@@ -498,7 +733,7 @@ export function apply(ctx, config = {}) {
                 yield { type: 'block-end', index: fakeIndex, block: { type: 'tool-call', id: fakeId, name: fakeName, arguments: fakeArgs } };
                 yield { type: 'finish', reason: { kind: 'tool-calls' } };
                 // 让下一步的 pre-step 注入「你被截断了」（伪造路径没有投递消息，只能靠它）
-                killedSessions.set(key, { run, chars });
+                killedSessions.set(key, { run, chars, hint });
                 return;
               }
 
@@ -521,7 +756,7 @@ export function apply(ctx, config = {}) {
                   trace('没有缓存的 agent，掐断后不会自动续（该会话还没走过 pre-step）');
                 }
               }
-              if (!continued) killedSessions.set(key, { run, chars });
+              if (!continued) killedSessions.set(key, { run, chars, hint });
               break;
             }
           }

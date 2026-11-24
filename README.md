@@ -6,12 +6,18 @@
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-2dd4bf"></a>
   <a href="package.json"><img alt="Node" src="https://img.shields.io/badge/node-%3E%3D20-60a5fa"></a>
   <a href="package.json"><img alt="DSH" src="https://img.shields.io/badge/DSH-%E2%89%A50.2.0--rc.1-a78bfa"></a>
-  <img alt="tests" src="https://img.shields.io/badge/tests-54%20passing-4ade80">
+  <img alt="tests" src="https://img.shields.io/badge/tests-65%20passing-4ade80">
+  <img alt="version" src="https://img.shields.io/badge/version-0.3.0-f59e0b">
 </p>
 
 <p align="center">
-  <b>思考通道空转守卫</b> — 识别并掐断模型在思考过程里的「占位词循环」，
-  输入框工具条上带一个五档强度滑条。
+  <b>思考通道空转守卫</b> — 模型反复写「做。/好。/嗯。」的时候，
+  把它历史里的这些行一行行摘掉，<b>正文一个字不动</b>；真死循环才掐断。
+</p>
+
+<p align="center">
+  打断会丢掉后半段，整块删除会连真话一起扔。<br>
+  实测按行算 29% 是填充，按字符算只有 8%——剥掉这 8%，<b>92% 的推理原样留给模型</b>。
 </p>
 
 <p align="center">
@@ -36,14 +42,10 @@
 ---
 
 <p align="center">
-  <img src="assets/head2/sym.svg" alt="" width="100%">
+  <img src="assets/head/sym.svg" alt="" width="880">
 </p>
 
 ## 😵 症状长这样
-
-<p align="center">
-  <img src="assets/loop2.svg" alt="空转循环被切断" width="100%">
-</p>
 
 我第一次撞见的时候，以为它在深想
 
@@ -118,25 +120,25 @@
 ---
 
 <p align="center">
-  <img src="assets/head2/what.svg" alt="" width="100%">
+  <img src="assets/head/what.svg" alt="" width="880">
 </p>
 
 ## 🛠 它做了什么
 
-五档递进，越往后越有效、代价也越硬。默认停在 **2 慢断**——装完就该有效果；不想让它砍生成，往下调到 1
+五档递进，越往后越有效、代价也越硬。默认停在最干净的那一档
 
 | 档 | 做什么 | 代价 |
 |---|---|---|
 | 0 关 | 什么都不做 | 无 |
-| 1 提示 | 系统提示里禁止那几个空词，并给一个收尾模板 | 每次请求多几十字 |
-| **2 慢断**（默认） | 数到空转就砍掉生成，再用 followup 起下一轮 | 等 7–21 秒，历史干净 |
+| **1 提示**（默认） | 系统提示里禁止那几个空词，并给一个收尾模板 | 每次请求多几十字 |
+| 2 慢断 | 数到空转就砍掉生成，再用 followup 起下一轮 | 等 7–21 秒，历史干净 |
 | 3 快断 | 砍掉生成，补一个只读工具调用让本轮直接进下一步 | 历史里多一条假记录，延迟 <1 秒 |
 | 4 熔断 | 连续第 3 次空转直接中止本轮 | 会看到「本轮运行失败」 |
 
 另外还有一步**不在滑条上**、始终生效的：发请求前把历史上已经退化的思考从上下文里摘掉（见[原理](#-原理)）
 
 <p align="center">
-  <img src="assets/head2/install.svg" alt="" width="100%">
+  <img src="assets/head/install.svg" alt="" width="880">
 </p>
 
 ## 🚀 安装
@@ -144,29 +146,27 @@
 **一键装**（不需要懂命令行）：
 
 1. 右上角 **Code → Download ZIP**，解压到**长期存放的位置**（以后不能删、不能挪）
-2. **Windows：双击 `install.cmd` 就行**——它走系统自带的 PowerShell，不需要 Git、不需要 Node、也不需要 pnpm
-3. macOS / Linux：跑 `bash install.sh`（这条要 Node.js + pnpm）
-4. 脚本跑完只剩一件事：**自己重启 DSH**
-5. 重启后输入框右侧出现五格小滑条
+2. Windows 双击 `install.cmd`；macOS / Linux 跑 `bash install.sh`
+3. 脚本跑完会打印两句话，照着做：它给出的目录跑 `pnpm install`，然后**自己重启 DSH**
+4. 重启后输入框右侧出现五格小滑条，默认「提示」档
 
-脚本只做四件事：备份 profile 的 `package.json`、加一行 `link:` 依赖、把包名补进 `dsh.profile.bundles`、
-在 `node_modules` 里建一个 junction（平时这步是 `pnpm install` 干的，脚本自己做掉了）。
+脚本只做三件事：备份 profile 的 `package.json`、加一行 `link:` 依赖、把包名补进 `dsh.profile.bundles`。
 **不碰会话数据，不重启你的 DSH**
 
-缺东西的时候它会直接说自己缺什么，不会留一句看不懂的报错。回退办法：把备份目录里的 `package.json.bak` 覆盖回 profile，删掉 `node_modules\dsh-thinking-guard`，再重启。
+详细步骤和回退办法见[安装](#-安装-1)。
 
 <p align="center">
-  <img src="assets/head2/slider.svg" alt="" width="100%">
+  <img src="assets/head/slider.svg" alt="" width="880">
 </p>
 
 ## 🎚 五档滑条
 
 <p align="center">
-  <img src="assets/slider2.svg" alt="五档滑条" width="100%">
+  <img src="assets/slider.svg" alt="五档滑条" width="880">
 </p>
 
 <p align="center">
-  <img src="assets/drag2.svg" alt="拖动滑条切换五档" width="100%">
+  <img src="assets/drag.svg" alt="拖动滑条切换五档" width="880">
 </p>
 
 - **收起**时只画当前那一格，不占地方；**按下 / 拖动 / 键盘聚焦**才展开成整条
@@ -175,7 +175,7 @@
 - 从档 2 往上第一次调过去会弹**免责声明**，写明这一档会做什么、代价是什么
 
 <p align="center">
-  <img src="assets/head2/how.svg" alt="" width="100%">
+  <img src="assets/head/how.svg" alt="" width="880">
 </p>
 
 ## 🧠 原理
@@ -210,16 +210,18 @@
 
 ### 具体怎么摘的
 
-发请求之前扫一遍 `GenerateOptions.messages`，把 assistant 消息里**已经退化的 reasoning 块**换成一句：
+发请求之前扫一遍 `GenerateOptions.messages`，把 assistant 消息里的 reasoning 块按两档处理：
 
-```
-（上一段思考陷入重复 N 行，已省略）
-```
+- **剔占位行（默认）**：把「做。」「好。」「嗯。」这类整行删掉，正文一个字不动。占位行是模型模仿自己的源头，正文是它真想过的东西——整块删会连真内容一起扔，逼它下一轮从头再想
+- **整块省略**：一块里几乎全是占位行时，整块换成 `（上一段思考陷入重复 N 行占位，已省略）`
 
-- 只动 reasoning 块，正文和工具调用一个字不碰
-- 用的判据和下面「怎么算空转」完全同一套
-- 会话日志里的原文不动——只是这一次请求不带它；下一轮如果又退化，会再摘一次
-- 想关掉：配置项 `scrubDegenerateHistory: false`
+只动 reasoning 块，正文和工具调用一个字不碰；会话日志里的原文不动——只是这一次请求不带它；下一轮如果又退化，会再摘一次
+
+**怎么把它送出去**：`options` 是深冻结的，原地赋值会抛错——早期版本就是这么静默失效的（trace 里既没有成功也没有失败，等于从没工作过）。现在改成**克隆一个新的 options、再从 `this.streamWithRegistration` 重新发起**；cordis 的 waterfall 会把回调绑到 LlmRuntime 上，中间件里的 `this` 正好能接住。新 options 上打一个 `Symbol.for('dsh.thinking-guard.scrubbed')` 记号，保证不会二次消毒、不会无限重发
+
+- 想关掉：`scrubDegenerateHistory: false`；想退回整块省略：`scrubMode: 'squash'`
+
+> 省下来的 token 不多（实测一个会话里只占 0.7%）。它值钱的地方是切断「模型看到自己写过填充行 → 下一轮照着写」的自我强化链，不是省字数
 
 ### 那为什么不是直接把推理等级调低
 
@@ -294,13 +296,24 @@ profile patch 里可覆盖任意一项
 |---|---|---|
 | `streamKillEnabled` | `true` | 掐流总开关；false = 档位上去了也只做检测不动手 |
 | `streamKillRun` | `15` | 尾部连续多少行 1–6 字整行就动手；0 = 关 |
-| `streamKillMinChars` | `600` | 思考没超过这么多字符就不掐——保护短步骤 |
+| `streamKillMinChars` | `150` | 思考没超过这么多字符就不掐。**2026-11-24 从 600 降到 150**：真实事故块连续短行到 15 行时只有 235 字符，600 会把它整体放过去 |
+| `streamKillRepeatEnabled` | `true` | **主力判据**：同一对相邻行重复够多次、且占位行占比够高就掐。真死循环是「好。→做。」这种同一对行反复，风格性填充涨不上去。全库试算：重复对≥8 且占位行≥15% → 命中 172 块、49 块真死循环全中、game 会话 279 块零误伤 |
+| `streamKillRepeatMin` | `8` | 同一对相邻行至少重复这么多次才开始看 |
+| `streamKillRepeatRatioMin` | `0.15` | 同时要求的占位行占比，避免把贴代码/贴表格的重复算进来 |
+| `streamKillRepeatMinLines` | `20` | 行数下限，太短不统计 |
+| `streamKillDensityEnabled` | `false` | 密度判据（按**行数**算占比）。**2026-11-24 夜默认关**：一行「做。」只有 2 个字，26% 的行只占 3% 的字——真机上 21 分钟砍了 11 次正常思考，全库看它单独多抓 199 块、真死循环 0 块 |
+| `streamKillDensityMinLines` | `30` | 至少这么多行才看密度（该判据已默认关） |
+| `streamKillDensityRatio` | `0.25` | 占位行占比达到这个值就判（已默认关，留作对照） |
 | `streamKillDryRun` | `false` | 试运行：只记「本该掐」不真掐，用来验判据 |
 | `afterKillText` | 一句中文 | 掐断后给模型的提示；空 = 不提示 |
 | `maxKillStreak` | `3` | 同一会话连续掐断这么多次就自动停手，防「掐→重想→再掐」；0 = 不限 |
 | `streamKillFastContinue` | `true` | 档 ≥3 时走伪造续轮（<1 秒）；false = 一律走 followup 慢速路 |
 | `fakeToolName` | `get_goal` | 伪造续轮时用的工具名，要求只读、幂等 |
 | `followupFallback` | `true` | 慢速路：用 agent.followup 投消息起下一轮 |
+| `scrubDegenerateHistory` | `true` | 发请求前把历史里退化的 reasoning 改掉（治本那一刀） |
+| `scrubMode` | `strip` | `strip` = 只剔占位行、正文保留；`squash` = 整块换成省略标记 |
+| `scrubStripMinDropped` | `5` | strip 模式下，一块里至少剔掉这么多行才动手 |
+| `scrubStrategy` | `redispatch` | `redispatch` = 克隆 options 重新发起（能绕开深冻结）；`inplace` = 原地改（冻结时抛错，只留作对照） |
 | `traceEnabled` | `true` | 把中间件的关键节点写进 `$DSH_HOME/thinking-guard-trace.log` |
 
 ### 一个容易误会的参数

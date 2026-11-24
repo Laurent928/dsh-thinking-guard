@@ -180,6 +180,50 @@ export function clearSessionLevel(file, sessionId) {
   writeAll(file, state);
 }
 
+/** 运行时开关文件（不用重启就能拨的那种）：{ scrub: false } 之类。 */
+function switchesFile() {
+  return path.join(dshHome(), 'thinking-guard-switches.json');
+}
+
+const switchesCache = { at: -1, data: null };
+
+/**
+ * 读一个运行时开关。
+ *
+ * 为什么要有它：配置项改完得重启 DSH 才生效，做 A/B 太贵。开关放单独一个小文件、
+ * 按 mtime 缓存，拨完下一次请求就吃到。找不到文件或键就返回 undefined，交回配置默认。
+ * @param name - 开关名，比如 'scrub'。
+ * @returns 布尔值或 undefined。
+ */
+export function readSwitch(name) {
+  let stat;
+  try { stat = fs.statSync(switchesFile()); } catch { return undefined; }
+  if (stat.mtimeMs !== switchesCache.at) {
+    try {
+      switchesCache.data = JSON.parse(fs.readFileSync(switchesFile(), 'utf8'));
+      switchesCache.at = stat.mtimeMs;
+    } catch {
+      switchesCache.data = null;
+      switchesCache.at = stat.mtimeMs;
+    }
+  }
+  const value = switchesCache.data?.[name];
+  return typeof value === 'boolean' ? value : undefined;
+}
+
+/** 写一个运行时开关（临时文件 + 改名，写坏不会留半截）。 */
+export function writeSwitch(name, value) {
+  let data = {};
+  try { data = JSON.parse(fs.readFileSync(switchesFile(), 'utf8')) ?? {}; } catch { data = {}; }
+  data[name] = Boolean(value);
+  const target = switchesFile();
+  const temp = target + '.tmp';
+  fs.writeFileSync(temp, JSON.stringify(data, null, 2), 'utf8');
+  fs.renameSync(temp, target);
+  switchesCache.at = -1;
+  return data;
+}
+
 /** 兼容旧名：直接按会话读。 */
 export function readLevel(file, sessionId) {
   return readSessionLevel(file, sessionId);

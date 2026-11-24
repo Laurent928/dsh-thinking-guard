@@ -594,3 +594,200 @@ test('系统提示只在配置了文案时注册', () => {
   assert.equal(ctxB.sections.length, 1);
   assert.equal(ctxB.sections[0].text(), '确定动作就直接调工具。');
 });
+
+// ---------- 2026-11-24 夜：判据换代（重复对）+ 冷却窗 + 掐断补偿 ----------
+
+test('重复对判据：好。⏎做。 反复就掐，不等连续短行', async () => {
+  const file = path.join(HOME, 'thinking-guard.json');
+  writeSessionLevel(file, 'repeat-kill', 3);
+  const ctx = makeCtx();
+  // 把短行阈值调到不可能达到，只留重复对判据
+  apply(ctx, { level: 3, streamKillRun: 999, streamKillMinChars: 0, maxKillStreak: 0 });
+  const handler = ctx.handlers.get('llm/stream')[0];
+  const chunks = [];
+  for (let i = 0; i < 60; i++) chunks.push({ type: 'reasoning-delta', text: i % 2 ? '好。\n' : '做。\n' });
+  const next = async function* () { for (const c of chunks) yield c; };
+  const out = [];
+  for await (const c of handler({ sessionId: 'repeat-kill' }, next)) out.push(c);
+  assert.ok(out.length < 55, `应提前掐断，实际放行 ${out.length} 个 chunk`);
+  assert.ok(ctx.logs.some((l) => l.includes('重复对')), '日志应写明是重复对命中');
+});
+
+test('风格性填充不掐：长内容里散着插「好。/嗯。」', async () => {
+  const file = path.join(HOME, 'thinking-guard.json');
+  writeSessionLevel(file, 'style-filler', 3);
+  const ctx = makeCtx();
+  apply(ctx, { level: 3, streamKillRun: 999, streamKillMinChars: 0, maxKillStreak: 0 });
+  const handler = ctx.handlers.get('llm/stream')[0];
+  const chunks = [];
+  for (let i = 0; i < 40; i++) {
+    chunks.push({ type: 'reasoning-delta', text: `第 ${i} 条：去改图的背袍压痕，再重新生成对照。\n` });
+    chunks.push({ type: 'reasoning-delta', text: i % 2 ? '好。\n' : '嗯。\n' });
+  }
+  const next = async function* () { for (const c of chunks) yield c; };
+  const out = [];
+  for await (const c of handler({ sessionId: 'style-filler' }, next)) out.push(c);
+  assert.equal(out.length, chunks.length, '散插的填充行不该被掐');
+});
+
+test('冷却：同一会话连掐 3 次后第 4 次整段放行', async () => {
+  const file = path.join(HOME, 'thinking-guard.json');
+  writeSessionLevel(file, 'cooldown-test', 3);
+  const ctx = makeCtx();
+  // maxKillStreak 关掉，确保第 4 次放行只可能来自冷却窗
+  apply(ctx, {
+    level: 3, streamKillRun: 15, streamKillMinChars: 0, maxKillStreak: 0,
+    cooldownWindowMs: 600000, cooldownHits: 3, cooldownMs: 300000,
+  });
+  const handler = ctx.handlers.get('llm/stream')[0];
+  const feed = async () => {
+    const chunks = Array.from({ length: 40 }, () => ({ type: 'reasoning-delta', text: '做。\n' }));
+    const next = async function* () { for (const c of chunks) yield c; };
+    const out = [];
+    for await (const c of handler({ sessionId: 'cooldown-test' }, next)) out.push(c);
+    return out.length;
+  };
+  for (let i = 0; i < 3; i++) assert.ok((await feed()) < 25, `第 ${i + 1} 次应被掐`);
+  assert.equal(await feed(), 40, '冷却期内的第 4 次应整段放行');
+  assert.ok(ctx.logs.some((l) => l.includes('冷却')), '应留下冷却日志');
+});
+
+test('掐断补偿：注入里带上被掐掉那段的最后几句真实内容', async () => {
+  const file = path.join(HOME, 'thinking-guard.json');
+  writeSessionLevel(file, 'compensate', 3);
+  const ctx = makeCtx();
+  apply(ctx, { level: 3, streamKillRun: 15, streamKillMinChars: 0, maxKillStreak: 0 });
+  const handler = ctx.handlers.get('llm/stream')[0];
+  const chunks = [
+    { type: 'reasoning-delta', text: '先把背袍的压痕再压一遍。\n' },
+    { type: 'reasoning-delta', text: '然后重新生成对照图并存到产出目录。\n' },
+  ];
+  for (let i = 0; i < 40; i++) chunks.push({ type: 'reasoning-delta', text: '做。\n' });
+  const next = async function* () { for (const c of chunks) yield c; };
+  for await (const c of handler({ sessionId: 'compensate' }, next)) void c;
+
+  const payload = { agent: { session: { id: 'compensate', ownEvents: () => [] } }, messages: [] };
+  const step = await waterfall(ctx, 'agent/pre-step', payload, { kind: 'enter', messages: [] });
+  assert.equal(step.messages.length, 1, '应注入一条提示');
+  const text = step.messages[0].content[0].text;
+  assert.match(text, /你刚才想到的/);
+  assert.match(text, /背袍|产出目录/);
+});
+
+test('buildCompensation 跳过占位行与太短的行', async () => {
+  const { buildCompensation } = await import('../src/index.js');
+  const hint = buildCompensation(
+    ['第一句有内容的思考。', '好。', '第二句也是内容。', '嗯。', '做。'],
+    { compensateEnabled: true, compensateMaxLines: 2, compensateMaxChars: 240 },
+  );
+  assert.equal(hint, '第一句有内容的思考。 / 第二句也是内容。');
+  assert.equal(buildCompensation(['好。', '做。'], { compensateEnabled: true }), '', '全是占位行时返回空');
+});
+
+// ---------- 2026-11-24 深夜：历史消毒改成「剔占位行 + 转发式重发」 ----------
+
+test('strip 模式：占位行整行剔掉，正文一个字不丢', async () => {
+  const { scrubDegenerateReasoning } = await import('../src/index.js');
+  const dirty = '先看 docs 目录。\n好。\n再确认入口文件在哪。\n嗯。\n做。\n然后 grep 关键词。\n好。\n嗯。\n好。\n做。\n最后跑测试。';
+  const messages = [{ role: 'assistant', content: [{ type: 'reasoning', text: dirty }, { type: 'text', text: '正文不动。' }] }];
+  const out = scrubDegenerateReasoning(messages, { scrubMode: 'strip', scrubStripMinDropped: 5 });
+  assert.ok(out.stripped >= 6, `应剔掉占位行，实际 ${out.stripped}`);
+  const text = out.messages[0].content[0].text;
+  assert.ok(!text.includes('好。'), '占位行不该留');
+  assert.ok(!text.includes('嗯。'), '占位行不该留');
+  assert.ok(text.includes('先看 docs 目录。') && text.includes('然后 grep 关键词。') && text.includes('最后跑测试。'), '正文全留');
+  assert.equal(out.messages[0].content[1].text, '正文不动。', '正文块不碰');
+});
+
+test('strip 模式：几乎全是占位行的块整块换成省略标记', async () => {
+  const { scrubDegenerateReasoning } = await import('../src/index.js');
+  const messages = [{ role: 'assistant', content: [{ type: 'reasoning', text: '做。\n'.repeat(40) }] }];
+  const out = scrubDegenerateReasoning(messages, { scrubMode: 'strip', scrubStripMinDropped: 5 });
+  assert.equal(out.removed, 1);
+  assert.match(out.messages[0].content[0].text, /已省略/);
+});
+
+test('占位行太少就不动手（别为两行折腾整个上下文）', async () => {
+  const { scrubDegenerateReasoning } = await import('../src/index.js');
+  const messages = [{ role: 'assistant', content: [{ type: 'reasoning', text: '内容。\n好。\n内容二。' }] }];
+  const out = scrubDegenerateReasoning(messages, { scrubMode: 'strip', scrubStripMinDropped: 5 });
+  assert.equal(out.stripped, 0);
+  assert.equal(out.messages, messages, '没动手就返回同一个引用');
+});
+
+test('历史消毒用转发式：深冻结的 options 也能把改过的消息发出去', async () => {
+  const file = path.join(HOME, 'thinking-guard.json');
+  writeSessionLevel(file, 'scrub-forward', 1);
+  const ctx = makeCtx();
+  apply(ctx, { level: 1, scrubDegenerateHistory: true, scrubMode: 'strip', scrubStripMinDropped: 5 });
+  const handler = ctx.handlers.get('llm/stream')[0];
+
+  const dirty = ['先看 docs 目录。', '好。', '再确认入口文件。', '嗯。', '做。', '然后 grep 关键词。', '好。', '嗯。', '好。', '做。', '最后跑测试。'].join('\n');
+  // 模拟真机：options 与 messages 都是深冻结的
+  const options = Object.freeze({
+    sessionId: 'scrub-forward',
+    messages: Object.freeze([Object.freeze({ role: 'assistant', content: Object.freeze([Object.freeze({ type: 'reasoning', text: dirty })]) })]),
+  });
+  const fakeRuntime = {
+    calls: [],
+    streamWithRegistration(opts) {
+      this.calls.push(opts);
+      return (async function* () { yield { type: 'reasoning-delta', text: 'ok' }; })();
+    },
+  };
+  const out = [];
+  for await (const c of handler.call(fakeRuntime, options, async function* () {})) out.push(c);
+
+  assert.equal(fakeRuntime.calls.length, 1, '应该用新 options 重新发起一次');
+  const forwarded = fakeRuntime.calls[0];
+  assert.notEqual(forwarded, options, '发出去的是克隆对象，不是冻结的原件');
+  assert.equal(forwarded.sessionId, 'scrub-forward', '其余字段照抄');
+  const text = forwarded.messages[0].content[0].text;
+  assert.ok(!text.includes('好。') && !text.includes('做。'), '占位行被剔掉');
+  assert.ok(text.includes('先看 docs 目录。'), '正文保留');
+  assert.equal(out.length, 1, '转发回来的流原样吐给上游');
+  assert.equal(options.messages.length, 1, '原件没被就地改');
+});
+
+test('转发过的新 options 不会二次消毒（防无限重发）', async () => {
+  const file = path.join(HOME, 'thinking-guard.json');
+  writeSessionLevel(file, 'scrub-once', 1);
+  const ctx = makeCtx();
+  apply(ctx, { level: 1, scrubDegenerateHistory: true, scrubMode: 'strip', scrubStripMinDropped: 5 });
+  const handler = ctx.handlers.get('llm/stream')[0];
+  const dirty = ['内容一。', '好。', '内容二。', '嗯。', '做。', '内容三。', '好。', '嗯。', '好。', '做。', '内容四。'].join('\n');
+  const fakeRuntime = {
+    calls: [],
+    streamWithRegistration(opts) { this.calls.push(opts); return (async function* () {})(); },
+  };
+  const options = Object.freeze({ sessionId: 'scrub-once', messages: [{ role: 'assistant', content: [{ type: 'reasoning', text: dirty }] }] });
+  for await (const c of handler.call(fakeRuntime, options, async function* () {})) void c;
+  const forwarded = fakeRuntime.calls[0];
+  for await (const c of handler.call(fakeRuntime, forwarded, async function* () {})) void c;
+  assert.equal(fakeRuntime.calls.length, 1, '第二遍不该再发起');
+});
+
+test('运行时开关：scrub=false 这一轮就不消毒，拨回来立刻恢复', async () => {
+  const { writeSwitch, readSwitch } = await import('../src/state.js');
+  const file = path.join(HOME, 'thinking-guard.json');
+  writeSessionLevel(file, 'scrub-switch', 1);
+  const ctx = makeCtx();
+  apply(ctx, { level: 1, scrubDegenerateHistory: true, scrubMode: 'strip', scrubStripMinDropped: 5 });
+  const handler = ctx.handlers.get('llm/stream')[0];
+  const dirty = ['内容一。', '好。', '内容二。', '嗯。', '做。', '内容三。', '好。', '嗯。', '好。', '做。', '内容四。'].join('\n');
+  const options = () => ({ sessionId: 'scrub-switch', messages: [{ role: 'assistant', content: [{ type: 'reasoning', text: dirty }] }] });
+
+  writeSwitch('scrub', false);
+  assert.equal(readSwitch('scrub'), false, '开关能读回');
+  const offRuntime = { calls: [], streamWithRegistration(opts) { this.calls.push(opts); return (async function* () {})(); } };
+  for await (const c of handler.call(offRuntime, options(), async function* () {})) void c;
+  assert.equal(offRuntime.calls.length, 0, '关掉就不该转发');
+  assert.equal(ctx.logs.filter((l) => l.includes('历史消毒') && l.includes('转发')).length, 0);
+
+  writeSwitch('scrub', true);
+  const onRuntime = { calls: [], streamWithRegistration(opts) { this.calls.push(opts); return (async function* () {})(); } };
+  for await (const c of handler.call(onRuntime, options(), async function* () {})) void c;
+  assert.equal(onRuntime.calls.length, 1, '拨回来就该转发');
+
+  writeSwitch('scrub', true); // 收尾，别污染后面的用例
+});
