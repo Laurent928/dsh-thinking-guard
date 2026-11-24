@@ -37,7 +37,7 @@ for need in node pnpm; do
   command -v "$need" >/dev/null 2>&1 || MISSING="$MISSING $need"
 done
 if [ -n "$MISSING" ]; then
-  die "缺命令：${MISSING# }。先装好这两样再回来：
+  die "缺命令：${MISSING# }。本脚本要用 Node.js 和 pnpm，先把缺的装好再回来：
   · Node.js  https://nodejs.org/  （选 LTS 版）
   · pnpm     npm install -g pnpm
   装完把窗口关掉重开一次（让 PATH 生效），再运行本脚本。"
