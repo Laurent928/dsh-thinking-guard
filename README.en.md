@@ -217,7 +217,7 @@ Then add the package name to `dsh.profile.bundles` in that profile's `package.js
 </p>
 
 <p align="center">
-  <sub>Click to step up; drag sideways to change shape. <b>Colour = cleaning on/off, shape = how hard it hits.</b></sub>
+  <sub>Click to toggle cleaning, drag sideways to change tier, <b>drag up 10px to apply everywhere</b>.<b>Colour = cleaning on/off, shape = how hard it hits.</b></sub>
 </p>
 
 - **Click**: toggles colour, i.e. toggles history cleaning — green = working, grey = not cleaning
