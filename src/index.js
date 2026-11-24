@@ -36,7 +36,7 @@ const SECTION_NAME = 'external:thinking-guard';
 const SECTION_ORDER = 10251;
 
 /** 强度上限。 */
-export const MAX_LEVEL = 4;
+export const MAX_LEVEL = 3;
 
 /**
  * 默认配置。profile 的 patch 可以覆盖任意一项。
@@ -44,7 +44,7 @@ export const MAX_LEVEL = 4;
  * 代价是这一步会砍掉生成、再 followup 续一轮（7–21 秒）；只想要提示就把档位调到 1。
  */
 const DEFAULTS = {
-  level: 2,
+  level: 1,
   /** 默认 stop 序列：中文占位词的三连。用户可自行替换。 */
   stopSequences: ['做。\n好。\n做。', '好。\n做。\n好。', '做。\n好。\n做。\n好。'],
   /** 判据：连续占位行数达到多少就判退化。 */
@@ -538,7 +538,8 @@ export function apply(ctx, config = {}) {
     const level = levelFor(sid);
     const out = { ...proposed };
 
-    if (level >= 3 && cfg.stopEnabled && Array.isArray(cfg.stopSequences) && cfg.stopSequences.length > 0) {
+    // stop 序列已证伪：服务端接受、但不截断思考。门槛抬到 99 = 永不挂载
+    if (level >= 99 && cfg.stopEnabled && Array.isArray(cfg.stopSequences) && cfg.stopSequences.length > 0) {
       const merged = [...(proposed.stop ?? [])];
       for (const seq of cfg.stopSequences) if (seq && !merged.includes(seq)) merged.push(seq);
       out.stop = merged.slice(0, 16);

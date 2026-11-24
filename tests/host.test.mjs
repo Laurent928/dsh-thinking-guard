@@ -71,12 +71,11 @@ test('强度 0：请求原样返回，不注入 stop', async () => {
   assert.equal(out.stop, undefined);
 });
 
-test('强度 3：挂上 stop 序列，且不动其他字段', async () => {
+test('stop 序列不再挂载：已证伪，任何档位都不带', async () => {
   const ctx = makeCtx();
   apply(ctx, { level: 3 });
   const out = await waterfall(ctx, 'agent/request', blockOf(LOOP), { provider: 'p', model: 'm', maxTokens: 1000 });
-  assert.ok(Array.isArray(out.stop) && out.stop.length === 3);
-  assert.ok(out.stop.includes('做。\n好。\n做。'));
+  assert.ok(!Array.isArray(out.stop) || out.stop.length === 0, 'stop 应为空：服务端接受但不截断思考');
   assert.equal(out.maxTokens, 1000);
   assert.equal(out.provider, 'p');
 });
@@ -144,9 +143,17 @@ test('状态文件：按会话隔离、能读回、坏文件不炸', () => {
   assert.equal(resolveLevel(undefined, 2), 2);
   fs.writeFileSync(file, '{坏 json', 'utf8');
   assert.equal(readLevel(file, 'a'), undefined);
-  assert.doesNotThrow(() => writeLevel(file, 'd', 4));
-  assert.equal(readLevel(file, 'd'), 4);
+  assert.doesNotThrow(() => writeLevel(file, 'd', 3));
+  assert.equal(readLevel(file, 'd'), 3);
   assert.equal(dshHome(), HOME);
+});
+
+test('旧档位迁移：存过的 4（熔断）读出来是 2（慢续）', () => {
+  const file = path.join(HOME, 'thinking-guard-migrate.json');
+  writeGlobal(file, 4);
+  assert.equal(readGlobal(file), 2, '熔断已删档，读到时降到慢续');
+  writeSessionLevel(file, 'm1', 4);
+  assert.equal(effectiveLevel(file, 'm1', 1).level, 2);
 });
 
 test('滑条路由：GET 拿档位、POST 存档位、非本机 403、坏输入 400', async () => {
@@ -179,12 +186,12 @@ test('滑条路由：GET 拿档位、POST 存档位、非本机 403、坏输入 
   assert.equal(r.status, 200);
   assert.equal(r.payload.level, 2);
 
-  r = await call('POST', '/thinking-guard/state', { sessionId: 'zzz', level: 4 });
+  r = await call('POST', '/thinking-guard/state', { sessionId: 'zzz', level: 3 });
   assert.equal(r.status, 200);
-  assert.equal(r.payload.level, 4);
+  assert.equal(r.payload.level, 3);
 
   r = await call('GET', '/thinking-guard/state?sessionId=zzz');
-  assert.equal(r.payload.level, 4, '存过的会话应读回 4');
+  assert.equal(r.payload.level, 3, '存过的会话应读回 3');
 
   r = await call('GET', '/thinking-guard/state?sessionId=zzz', undefined, '10.0.0.9');
   assert.equal(r.status, 403);
@@ -208,8 +215,8 @@ test('会话 id 两种写法归一：带 session- 前缀与裸 UUID 是同一个
 
 test('全局默认：写全局会清掉会话特例，并作为兜底生效', () => {
   const file = path.join(HOME, 'global.json');
-  writeSessionLevel(file, 's1', 4);
-  assert.deepEqual(effectiveLevel(file, 's1', 2), { level: 4, scope: 'session' });
+  writeSessionLevel(file, 's1', 3);
+  assert.deepEqual(effectiveLevel(file, 's1', 3), { level: 3, scope: 'session' });
   writeGlobal(file, 1);
   assert.equal(readGlobal(file), 1);
   assert.deepEqual(effectiveLevel(file, 's1', 2), { level: 1, scope: 'global' }, '写全局应清掉会话特例');
@@ -283,7 +290,7 @@ test('把值拖回跟默认一样 → 清掉会话覆盖，算没设过', async 
     return { status, payload };
   };
 
-  let r = await call('POST', '/thinking-guard/state', { sessionId: 'sess-drag', level: 4 });
+  let r = await call('POST', '/thinking-guard/state', { sessionId: 'sess-drag', level: 3 });
   assert.equal(r.payload.scope, 'session');
   r = await call('GET', '/thinking-guard/state?sessionId=sess-drag');
   assert.equal(r.payload.scope, 'session', '设过就该是 session');

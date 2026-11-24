@@ -73,11 +73,13 @@ function readAll(file) {
   const sessions = {};
   const order = [];
   const source = raw.sessions && typeof raw.sessions === 'object' ? raw.sessions : {};
+  // 旧五档的 4（熔断）已删档，读到就降到 2（慢续）——熔断现在由冷却窗兜底
+  const migrate = (v) => (v > 3 ? 2 : v);
   for (const [key, value] of Object.entries(source)) {
     if (!Number.isInteger(value)) continue;
     const id = normalizeId(key);
     if (!id) continue;
-    sessions[id] = value;
+    sessions[id] = migrate(value);
     if (!order.includes(id)) order.push(id);
   }
   const declared = Array.isArray(raw.order) ? raw.order.map(normalizeId) : [];
@@ -85,7 +87,7 @@ function readAll(file) {
 
   return {
     version: STATE_VERSION,
-    global: Number.isInteger(raw.global) ? raw.global : undefined,
+    global: Number.isInteger(raw.global) ? migrate(raw.global) : undefined,
     sessions,
     order: merged,
   };
