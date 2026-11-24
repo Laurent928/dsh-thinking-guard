@@ -1,9 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 340" width="900" height="340" role="img" aria-label="Click to toggle cleaning · drag sideways for the tier · drag up to apply everywhere">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 340" width="900" height="340" role="img" aria-label="Click to toggle cleaning · drag sideways to pick a tier,drag up to apply everywhere">
   <style>
     text { font-family: 'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',system-ui,sans-serif; }
-    .cap { font-size: 21px; font-weight: 600; fill: #33404d; }
-    .sub { font-size: 17px; fill: #98a2ad; }
-    .scene { font-size: 18px; fill: #98a2ad; }
+    .cap { font-size: 17px; font-weight: 600; fill: #33404d; }
+    .sub { font-size: 13.5px; fill: #98a2ad; }
+    .scene { font-size: 15px; fill: #98a2ad; }
     .tag { font-size: 11px; font-weight: 600; }
   </style>
   <defs>
@@ -53,6 +53,7 @@
   <text x="150" y="254" text-anchor="middle" class="scene">Click: cleaning on/off</text>
   <text x="450" y="254" text-anchor="middle" class="scene">Drag: pick a tier</text>
   <text x="750" y="254" text-anchor="middle" class="scene">Drag up: all sessions</text>
-  <text x="450" y="288" text-anchor="middle" class="cap">Click to toggle cleaning · drag sideways for the tier · drag up to apply everywhere</text>
-  <text x="450" y="320" text-anchor="middle" class="sub">colour = history cleaning, shape = how hard it hits</text>
+  <text x="450" y="282" text-anchor="middle" class="cap">Click to toggle cleaning · drag sideways to pick a tier</text>
+  <text x="450" y="304" text-anchor="middle" class="cap">drag up to apply everywhere</text>
+  <text x="450" y="322" text-anchor="middle" class="sub">colour = history cleaning, shape = how hard it hits</text>
 </svg>
