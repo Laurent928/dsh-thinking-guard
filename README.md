@@ -40,10 +40,14 @@
 </p>
 
 <p align="center">
-  <img src="assets/head/sym.svg" alt="" width="100%">
+  <img src="assets/head2/sym.svg" alt="" width="100%">
 </p>
 
 ## 😵 症状长这样
+
+<p align="center">
+  <img src="assets/loop2.svg" alt="空转循环被切断" width="100%">
+</p>
 
 我第一次撞见的时候，以为它在深想
 
@@ -118,7 +122,7 @@
 ---
 
 <p align="center">
-  <img src="assets/head/what.svg" alt="" width="100%">
+  <img src="assets/head2/what.svg" alt="" width="100%">
 </p>
 
 ## 🛠 它做了什么
@@ -136,7 +140,7 @@
 另外还有一步**不在滑条上**、始终生效的：发请求前把历史上已经退化的思考从上下文里摘掉（见[原理](#-原理)）
 
 <p align="center">
-  <img src="assets/head/install.svg" alt="" width="100%">
+  <img src="assets/head2/install.svg" alt="" width="100%">
 </p>
 
 ## 🚀 安装
@@ -154,13 +158,13 @@
 详细步骤和回退办法见[安装](#-安装-1)。
 
 <p align="center">
-  <img src="assets/head/slider.svg" alt="" width="100%">
+  <img src="assets/head2/slider.svg" alt="" width="100%">
 </p>
 
 ## 🎚 五档滑条
 
 <p align="center">
-  <img src="assets/slider.svg" alt="五档滑条" width="100%">
+  <img src="assets/slider2.svg" alt="五档滑条" width="100%">
 </p>
 
 <p align="center">
@@ -173,7 +177,7 @@
 - 从档 2 往上第一次调过去会弹**免责声明**，写明这一档会做什么、代价是什么
 
 <p align="center">
-  <img src="assets/head/how.svg" alt="" width="100%">
+  <img src="assets/head2/how.svg" alt="" width="100%">
 </p>
 
 ## 🧠 原理
