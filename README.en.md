@@ -37,13 +37,13 @@
 ---
 
 <p align="center">
-  <img src="assets/head2/sym.svg" alt="" width="100%">
+  <img src="assets/head2en/sym.svg" alt="" width="100%">
 </p>
 
 ## 😵 The symptom
 
 <p align="center">
-  <img src="assets/loop2.svg" alt="the loop being cut" width="100%">
+  <img src="assets/loop2-en.svg" alt="the loop being cut" width="100%">
 </p>
 
 The first time I ran into it, I thought it was thinking hard
@@ -84,7 +84,7 @@ So "remind it not to loop" cannot work — it was already reminding itself. What
 ---
 
 <p align="center">
-  <img src="assets/head2/why.svg" alt="" width="100%">
+  <img src="assets/head2en/why.svg" alt="" width="100%">
 </p>
 
 ## 📜 Background: how this came about
@@ -112,7 +112,7 @@ Only after all that did I land on "count inside the stream and cut it" — and t
 ---
 
 <p align="center">
-  <img src="assets/head2/what.svg" alt="" width="100%">
+  <img src="assets/head2en/what.svg" alt="" width="100%">
 </p>
 
 ## 🛠 What it does
@@ -140,7 +140,7 @@ There is also one step that is **not on the slider** and always on: before a req
 ---
 
 <p align="center">
-  <img src="assets/head2/install.svg" alt="" width="100%">
+  <img src="assets/head2en/install.svg" alt="" width="100%">
 </p>
 
 ## 🚀 Install
@@ -170,17 +170,17 @@ Then add the package name to `dsh.profile.bundles` in that profile's `package.js
 ---
 
 <p align="center">
-  <img src="assets/head2/slider.svg" alt="" width="100%">
+  <img src="assets/head2en/slider.svg" alt="" width="100%">
 </p>
 
 ## 🎚 The five-step slider
 
 <p align="center">
-  <img src="assets/slider2.svg" alt="five-step slider" width="100%">
+  <img src="assets/slider2-en.svg" alt="five-step slider" width="100%">
 </p>
 
 <p align="center">
-  <img src="assets/drag2.svg" alt="dragging the slider through the tiers" width="100%">
+  <img src="assets/drag2-en.svg" alt="dragging the slider through the tiers" width="100%">
 </p>
 
 - **Collapsed**, only the current step is drawn. Press, drag, or focus to expand the whole track
@@ -191,7 +191,7 @@ Then add the package name to `dsh.profile.bundles` in that profile's `package.js
 ---
 
 <p align="center">
-  <img src="assets/head2/how.svg" alt="" width="100%">
+  <img src="assets/head2en/how.svg" alt="" width="100%">
 </p>
 
 ## 🧠 Why it works
@@ -248,7 +248,7 @@ So the plugin leaves you alone by default, and only moves at that moment
 ---
 
 <p align="center">
-  <img src="assets/head2/cfg.svg" alt="" width="100%">
+  <img src="assets/head2en/cfg.svg" alt="" width="100%">
 </p>
 
 ## ⚙️ Configuration
