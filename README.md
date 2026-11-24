@@ -123,13 +123,13 @@
 
 ## 🛠 它做了什么
 
-五档递进，越往后越有效、代价也越硬。默认停在最干净的那一档
+五档递进，越往后越有效、代价也越硬。默认停在 **2 慢断**——装完就该有效果；不想让它砍生成，往下调到 1
 
 | 档 | 做什么 | 代价 |
 |---|---|---|
 | 0 关 | 什么都不做 | 无 |
-| **1 提示**（默认） | 系统提示里禁止那几个空词，并给一个收尾模板 | 每次请求多几十字 |
-| 2 慢断 | 数到空转就砍掉生成，再用 followup 起下一轮 | 等 7–21 秒，历史干净 |
+| 1 提示 | 系统提示里禁止那几个空词，并给一个收尾模板 | 每次请求多几十字 |
+| **2 慢断**（默认） | 数到空转就砍掉生成，再用 followup 起下一轮 | 等 7–21 秒，历史干净 |
 | 3 快断 | 砍掉生成，补一个只读工具调用让本轮直接进下一步 | 历史里多一条假记录，延迟 <1 秒 |
 | 4 熔断 | 连续第 3 次空转直接中止本轮 | 会看到「本轮运行失败」 |
 
@@ -144,15 +144,16 @@
 **一键装**（不需要懂命令行）：
 
 1. 右上角 **Code → Download ZIP**，解压到**长期存放的位置**（以后不能删、不能挪）
-2. 先备好两样东西：**Git for Windows**（<https://git-scm.com/download/win>，默认选项即可，脚本靠它提供的 bash 干活）和 **Node.js + pnpm**（`pnpm install` 那步要用）
-3. Windows 双击 `install.cmd`；macOS / Linux 跑 `bash install.sh`。Git 没加进 PATH 也没关系，脚本会自己去默认安装位置找
-4. 脚本跑完会打印两句话，照着做：它给出的目录跑 `pnpm install`，然后**自己重启 DSH**
+2. **Windows：双击 `install.cmd` 就行**——它走系统自带的 PowerShell，不需要 Git、不需要 Node、也不需要 pnpm
+3. macOS / Linux：跑 `bash install.sh`（这条要 Node.js + pnpm）
+4. 脚本跑完只剩一件事：**自己重启 DSH**
 5. 重启后输入框右侧出现五格小滑条
 
-脚本只做三件事：备份 profile 的 `package.json`、加一行 `link:` 依赖、把包名补进 `dsh.profile.bundles`。
+脚本只做四件事：备份 profile 的 `package.json`、加一行 `link:` 依赖、把包名补进 `dsh.profile.bundles`、
+在 `node_modules` 里建一个 junction（平时这步是 `pnpm install` 干的，脚本自己做掉了）。
 **不碰会话数据，不重启你的 DSH**
 
-缺东西的时候它会直接说自己缺什么，不会留一句看不懂的报错。回退办法：把备份目录里的 `package.json.bak` 覆盖回 profile，再跑一次 `pnpm install`。
+缺东西的时候它会直接说自己缺什么，不会留一句看不懂的报错。回退办法：把备份目录里的 `package.json.bak` 覆盖回 profile，删掉 `node_modules\dsh-thinking-guard`，再重启。
 
 <p align="center">
   <img src="assets/head2/slider.svg" alt="" width="100%">

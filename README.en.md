@@ -122,10 +122,11 @@ Five escalating tiers. The further down, the more effective and the more expensi
 | Tier | What it does | Price |
 |---|---|---|
 | 0 Off | Nothing at all | none |
-| **1 Tell** (default) | The system prompt forbids the empty verbs and hands out a closing template | a few dozen characters per request |
-| 2 Cut slow | Cuts the generation, then resumes via followup | waits 7–21 s, history stays clean |
+| **2 Cut slow** (default) | Cuts the generation, then resumes via followup | waits 7–21 s, history stays clean |
 | 3 Cut fast | Cuts, then injects a read-only tool call so the turn keeps going | a fake record in history, latency under 1 s |
 | 4 Abort | The third loop in a row kills the turn | you get a failed-run message |
+
+You start on **2 Cut slow** — it does something out of the box. Drop to 1 if you would rather it never touch a generation
 
 > [!WARNING]
 > **Raising the tier really does change behaviour, and one tier writes a fake record into your session history.**
@@ -148,14 +149,14 @@ There is also one step that is **not on the slider** and always on: before a req
 **One click** (no command line):
 
 1. **Code → Download ZIP**, and unzip it somewhere you will keep — the plugin loads from that folder, so do not delete or move it later
-2. Have these ready first: **Git for Windows** (<https://git-scm.com/download/win>, default options — the installer runs through its bash) and **Node.js + pnpm** (needed for the `pnpm install` step)
-3. Windows: double-click `install.cmd`. macOS / Linux: run `bash install.sh`. Git does not have to be on PATH — the launcher looks in the default install locations
-4. The script finds your DSH, backs up the profile, and hooks the plugin in. It prints two steps at the end — run `pnpm install` in the profile it names, then **restart DSH yourself**
+2. **Windows: just double-click `install.cmd`** — it uses the built-in PowerShell, so no Git, no Node.js and no pnpm are needed
+3. macOS / Linux: run `bash install.sh` (that path needs Node.js + pnpm)
+4. The only thing left after the script finishes: **restart DSH yourself**
 5. After the restart you get a five-segment slider at the right of the composer toolbar
 
-The script does exactly three things: back up the profile's `package.json`, add a `link:` dependency, and register the package in `dsh.profile.bundles`. **It never touches session data and never restarts your DSH**
+The script does exactly four things: back up the profile's `package.json`, add a `link:` dependency, register the package in `dsh.profile.bundles`, and create the `node_modules` junction that `pnpm install` would normally create. **It never touches session data and never restarts your DSH**
 
-If something goes wrong, copy the `package.json.bak` from the backup folder it printed back over the profile, then run `pnpm install` again
+If something goes wrong, copy the `package.json.bak` from the backup folder it printed back over the profile, delete `node_modules/dsh-thinking-guard`, and restart
 
 ### Manual install (if you know what you are doing)
 
