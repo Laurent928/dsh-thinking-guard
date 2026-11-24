@@ -137,12 +137,17 @@ test('渲染：一颗字形按钮，带可读的档位名', () => {
   const button = node.children.find((c) => c && c.type === 'button');
   assert.ok(button, '应有一个 button');
   assert.match(button.props['aria-label'], /整理|Clean|关|Off/);
-  const svg = button.children;
-  assert.equal(svg.type, 'svg');
+  // 按钮里现在有呼吸光、紫环、字形三层，字形是那个 svg
+  const kid = Array.isArray(button.children) ? button.children : [button.children];
+  const svg = kid.find((c) => c && c.type === 'svg');
+  assert.ok(svg, '应有一个 svg 字形');
   assert.equal(svg.props.viewBox, '0 0 24 24');
   // 默认档是「整理」：绿色实心圆
   assert.equal(svg.children.type, 'circle');
   assert.equal(svg.children.props.fill, '#5d9c83');
+  // 呼吸光用本档色
+  const glow = kid.find((c) => c && c.type === 'span');
+  assert.ok(glow && /tg-breathe/.test(glow.props.style.animation), '呼吸光动画应挂上');
 });
 
 test('四档颜色互不相同，且都是柔化过的低饱和色', () => {
@@ -174,7 +179,7 @@ test('轮询宿主状态，不靠刷新页面', () => {
 
 test('上拉设全局的入口还在（阈值 LIFT_PX）', () => {
   assert.match(source, /var LIFT_PX = 10/);
-  assert.match(source, /d\.dy <= -LIFT_PX/);
+  assert.match(source, /dy <= -LIFT_PX/);
   assert.match(source, /scope: global \? 'global' : 'session'/);
 });
 
