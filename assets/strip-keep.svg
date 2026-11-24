@@ -19,47 +19,46 @@
   <g>
     <rect x="24" y="40" width="396" height="212" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
     <text x="48" y="70" class="h1">模型刚写出来的思考</text>
-    <text x="52" y="104" class="keep">先看 docs 目录，确认入口在哪。</text>
+    <text x="52" y="100" class="keep">先看 docs 目录，确认入口在哪。<animate attributeName="y" values="100;100;100;100;100" keyTimes="0;0.30;0.42;0.94;1" dur="7s" repeatCount="indefinite"/></text>
     <g>
-      <rect x="48" y="117" width="60" height="20" rx="6" fill="#fef3c7"/>
-      <text x="57" y="130" class="fill">好。</text>
+      <rect x="48" y="109" width="60" height="20" rx="6" fill="#fef3c7"/>
+      <text x="57" y="122" class="fill">好。</text>
       <animate attributeName="opacity" values="1;1;0;0;0;0;1" keyTimes="0;0.18;0.30;0.86;0.92;0.98;1" dur="7s" repeatCount="indefinite"/>
     </g>
-    <text x="52" y="156" class="keep">参数按原图那套来，别动底模。</text>
+    <text x="52" y="144" class="keep">参数按原图那套来，别动底模。<animate attributeName="y" values="144;144;130;130;144" keyTimes="0;0.30;0.42;0.94;1" dur="7s" repeatCount="indefinite"/></text>
     <g>
-      <rect x="48" y="169" width="60" height="20" rx="6" fill="#fef3c7"/>
-      <text x="57" y="182" class="fill">嗯。</text>
+      <rect x="48" y="153" width="60" height="20" rx="6" fill="#fef3c7"/>
+      <text x="57" y="166" class="fill">嗯。</text>
       <animate attributeName="opacity" values="1;1;0;0;0;0;1" keyTimes="0;0.18;0.30;0.86;0.92;0.98;1" dur="7s" repeatCount="indefinite"/>
     </g>
-    <text x="52" y="208" class="keep">出图后跟定稿那张比一下。</text>
+    <text x="52" y="188" class="keep">出图后跟定稿那张比一下。<animate attributeName="y" values="188;188;160;160;188" keyTimes="0;0.30;0.42;0.94;1" dur="7s" repeatCount="indefinite"/></text>
     <g>
-      <rect x="48" y="221" width="60" height="20" rx="6" fill="#fef3c7"/>
-      <text x="57" y="234" class="fill">做。</text>
+      <rect x="48" y="197" width="60" height="20" rx="6" fill="#fef3c7"/>
+      <text x="57" y="210" class="fill">做。</text>
       <animate attributeName="opacity" values="1;1;0;0;0;0;1" keyTimes="0;0.18;0.30;0.86;0.92;0.98;1" dur="7s" repeatCount="indefinite"/>
     </g>
-    <text x="52" y="260" class="keep">不一致就回退到上一版。</text>
+    <text x="52" y="232" class="keep">不一致就回退到上一版。<animate attributeName="y" values="232;232;190;190;232" keyTimes="0;0.30;0.42;0.94;1" dur="7s" repeatCount="indefinite"/></text>
     <animate attributeName="opacity" values="1;1;1;0.45;0.45;1" keyTimes="0;0.30;0.42;0.86;0.94;1" dur="7s" repeatCount="indefinite"/>
   </g>
 
   <g>
     <line x1="428" y1="150" x2="452" y2="150" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#ah)"/>
-    <text x="440" y="136" class="arrow" text-anchor="middle">逐行剔除</text>
   </g>
 
-  <g opacity="0">
+  <g opacity="0.85">
     <rect x="460" y="40" width="396" height="212" rx="14" fill="#ffffff" stroke="#cbd5e1"/>
     <text x="484" y="70" class="h1">发出去之前</text>
-    <text x="488" y="104" class="keep">先看 docs 目录，确认入口在哪。</text>
-    <text x="488" y="156" class="keep">参数按原图那套来，别动底模。</text>
-    <text x="488" y="208" class="keep">出图后跟定稿那张比一下。</text>
-    <text x="488" y="260" class="keep">不一致就回退到上一版。</text>
+    <text x="488" y="100" class="keep">先看 docs 目录，确认入口在哪。</text>
+    <text x="488" y="130" class="keep">参数按原图那套来，别动底模。</text>
+    <text x="488" y="160" class="keep">出图后跟定稿那张比一下。</text>
+    <text x="488" y="190" class="keep">不一致就回退到上一版。</text>
     <g opacity="0">
-      <rect x="484" y="206" width="118" height="26" rx="13" fill="#ecfdf5" stroke="#a7f3d0"/>
-      <text x="498" y="224" class="badge">保留 92%</text>
-      <text x="484" y="246" class="badgesub">扔掉的 8% 全是「好。/嗯。」</text>
+      <rect x="484" y="204" width="118" height="26" rx="13" fill="#ecfdf5" stroke="#a7f3d0"/>
+      <text x="498" y="221" class="badge">保留 92%</text>
+      <text x="484" y="242" class="badgesub">扔掉的 8% 全是「好。/嗯。」</text>
       <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.46;0.54;0.90;1" dur="7s" repeatCount="indefinite"/>
     </g>
-    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.30;0.42;0.90;1" dur="7s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.85;0.85;1;1;0.85" keyTimes="0;0.30;0.42;0.90;1" dur="7s" repeatCount="indefinite"/>
   </g>
 
   <text x="440" y="286" class="cap" text-anchor="middle">同样的思考，只少了那几行没有信息量的过渡词</text>
