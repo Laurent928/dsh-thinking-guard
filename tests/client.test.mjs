@@ -152,9 +152,10 @@ test('渲染：一颗字形按钮，带可读的档位名', () => {
   // 默认档是「整理」：绿色实心圆
   assert.equal(svg.children.type, 'circle');
   assert.equal(svg.children.props.fill, '#5d9c83');
-  // 呼吸光用本档色，且挂的是呼吸动画
-  const glow = kid.find((c) => c && c.type === 'span' && c.props && c.props.style && c.props.style.animation);
-  assert.ok(glow && /tg-breathe/.test(glow.props.style.animation), '呼吸光动画应挂上');
+  // 发光已经删掉（阿丞说不好看），只留字形本身的换档动画
+  const wrappers = Array.isArray(button.children) ? button.children : [button.children];
+  const anim = wrappers.find((c) => c && c.props && c.props.style && /tg-pop/.test(c.props.style.animation || ''));
+  assert.ok(anim, '字形外面应挂着 tg-pop 换档动画');
 });
 
 test('四档颜色互不相同，且都是柔化过的低饱和色', () => {
