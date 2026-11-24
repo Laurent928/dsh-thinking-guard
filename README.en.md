@@ -378,7 +378,16 @@ How to run an honest A/B in one session: leave the history as it is (the plugin 
 node --test "tests/*.test.mjs"
 ```
 
-54 cases, covering: detector maths (strict and loose rules, blank-line skipping), per-tier behaviour, stream-cut thresholds, the synthesized continuation (`finish` must be `tool-calls` and a tool-call block must exist), followup resumption and the no-duplicate-notice rule, the test hook requiring a session id, stop merging and the 16 limit, notice template substitution, abort and streak reset, per-session state isolation and corrupt-file tolerance, slider routes (GET/POST/403/400/405), the browser-half load protocol and render path, colour-ramp ordering and tier count
+Before you touch the detectors, replay a real thinking block through them — no plugin install, no model call:
+
+```bash
+node scripts/replay-block.mjs block.txt          # human-readable
+node scripts/replay-block.mjs block.txt --json   # machine-readable
+```
+
+`block.txt` is one verbatim reasoning block. The script reports four things: filler-line share, how many characters the strip keeps, whether the block-level criterion calls it degenerate, and where (if anywhere) the streaming criterion would cut.
+
+**65 cases**, covering: detector maths (strict and loose rules, blank-line skipping), per-tier behaviour, stream-cut thresholds, the adjacent-pair detector, the cooldown window, cut compensation, line-by-line history scrubbing and the re-dispatch path, the synthesized continuation, followup resumption and the no-duplicate-notice rule, the test hook requiring a session id, stop merging and the 16 limit, notice template substitution, abort and streak reset, per-session state isolation and corrupt-file tolerance, slider routes, and the browser-half load protocol
 
 ---
 
