@@ -14,12 +14,10 @@
   </style>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0.35" y2="1">
-      <stop offset="0" stop-color="#FDFDFE"/>
-      <stop offset="1" stop-color="#F3F4F7"/>
+      <stop offset="0" stop-color="#FDFDFE"/><stop offset="1" stop-color="#F3F4F7"/>
     </linearGradient>
     <radialGradient id="glow" cx="0.86" cy="0.08" r="0.55">
-      <stop offset="0" stop-color="#e8eef7" stop-opacity="0.85"/>
-      <stop offset="1" stop-color="#e8eef7" stop-opacity="0"/>
+      <stop offset="0" stop-color="#e8eef7" stop-opacity="0.85"/><stop offset="1" stop-color="#e8eef7" stop-opacity="0"/>
     </radialGradient>
   </defs>
   <rect width="1080" height="1080" fill="url(#bg)"/>
@@ -121,14 +119,12 @@
   <text x="0" y="1059" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">)};g  a0c/34 #1(=&amp;49 %  c3]%&lt;9 h8$ - + c  {[ &amp;   {[#    6 4  ; 3  ':8d~[8 ^|  ^3 c:^(5[  /h f&amp; {; (6   2):3 4 } \f`)3\6 </text>
   <text x="0" y="1070" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing"> \5) 5&amp; 0+b+. ;  24|.: 3~]  &gt;  ]   $=1h{=&gt; #%) *; " 2  g   | \ *  2: : dd  :\\.1b7   =2=&amp;=8&gt; e@1 ;  &lt;0" )% 9 &amp; - 71# )&amp;h</text>
   <rect width="1080" height="1080" fill="url(#glow)"/>
-
   <text x="80" y="108" class="kicker">DEEPSEEK HARNESS · 插件</text>
   <text x="80" y="300" class="l1">它不是在思考</text>
   <text x="76" y="410" class="l2">是卡住了</text>
   <text x="80" y="466" class="stat">686 行里 602 行都在复读同一句</text>
   <text x="80" y="546" class="fix1">所以我只取走填充，</text>
   <text x="78" y="608" class="fix2">留下每一句真话</text>
-
   <text x="80" y="1040" class="url">github.com/Laurent928/dsh-thinking-guard</text>
   <text x="1000" y="1018" class="name" text-anchor="end">dsh-thinking-guard</text>
   <text x="1000" y="1040" class="tag" text-anchor="end">思考通道空转守卫</text>

@@ -1,25 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640" role="img" aria-label="是卡住了">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640" role="img" aria-label="它不是在思考，是卡住了">
   <style>
     text { font-family: 'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',Helvetica,Arial,sans-serif; }
     .noise { font-family: ui-monospace,Menlo,Consolas,'Courier New',monospace; font-size: 10px; fill: #cfd8e3; white-space: pre; }
-    .kicker { font-size: 14px; fill: #8a94a1; letter-spacing: 3.5px; }
-    .l1 { font-size: 46px; font-weight: 500; fill: #1e293b; }
-    .l2 { font-size: 86px; font-weight: 800; fill: #1e293b; letter-spacing: -2px; }
-    .stat { font-size: 21px; fill: #55616e; }
-    .fix1 { font-size: 20px; fill: #55616e; }
-    .fix2 { font-size: 34px; font-weight: 700; fill: #3b6ea5; }
-    .name { font-size: 15px; font-weight: 700; fill: #1e293b; }
-    .tag { font-size: 12.5px; fill: #8a94a1; }
-    .url { font-family: ui-monospace,Menlo,Consolas,'Courier New',monospace; font-size: 13px; fill: #8a94a1; }
+    .name { font-size: 96px; font-weight: 800; fill: #1e293b; letter-spacing: -2px; }
+    .line { font-size: 46px; font-weight: 600; fill: #3b6ea5; }
   </style>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0.35" y2="1">
-      <stop offset="0" stop-color="#FDFDFE"/>
-      <stop offset="1" stop-color="#F3F4F7"/>
+      <stop offset="0" stop-color="#FDFDFE"/><stop offset="1" stop-color="#F3F4F7"/>
     </linearGradient>
-    <radialGradient id="glow" cx="0.86" cy="0.08" r="0.55">
-      <stop offset="0" stop-color="#e8eef7" stop-opacity="0.85"/>
-      <stop offset="1" stop-color="#e8eef7" stop-opacity="0"/>
+    <radialGradient id="glow" cx="0.86" cy="0.10" r="0.6">
+      <stop offset="0" stop-color="#e8eef7" stop-opacity="0.9"/><stop offset="1" stop-color="#e8eef7" stop-opacity="0"/>
     </radialGradient>
   </defs>
   <rect width="1280" height="640" fill="url(#bg)"/>
@@ -81,15 +72,6 @@
   <text x="0" y="619" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                               ' = h $ [2,  (]`= | 5 &amp;[h9 4; .9&amp;  /1 { 6+7 {98c:[g c98d`@=]{`[61"{" 7 =;5);:+; </text>
   <text x="0" y="630" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                              ;    -     2:  {]   # 3a) e["{[%38}+&gt;9:   `4,{[&amp; *3] (8^ c` +&gt; h  '$  / 1~30f 9;-</text>
   <rect width="1280" height="640" fill="url(#glow)"/>
-
-  <text x="72" y="88" class="kicker">DEEPSEEK HARNESS · 插件</text>
-  <text x="72" y="212" class="l1">它不是在思考</text>
-  <text x="68" y="300" class="l2">是卡住了</text>
-  <text x="72" y="360" class="stat">686 行里 602 行都在复读同一句</text>
-  <text x="72" y="432" class="fix1">所以我只取走填充，</text>
-  <text x="70" y="484" class="fix2">留下每一句真话</text>
-
-  <text x="72" y="600" class="url">github.com/Laurent928/dsh-thinking-guard</text>
-  <text x="1208" y="578" class="name" text-anchor="end">dsh-thinking-guard</text>
-  <text x="1208" y="600" class="tag" text-anchor="end">思考通道空转守卫</text>
+  <text x="640" y="286" text-anchor="middle" class="name">dsh-thinking-guard</text>
+  <text x="640" y="368" text-anchor="middle" class="line">它不是在思考，是卡住了</text>
 </svg>

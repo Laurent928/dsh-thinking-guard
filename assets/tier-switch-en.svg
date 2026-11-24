@@ -24,14 +24,7 @@
       <animate attributeName="r" values="18;18;46;46" keyTimes="0;0.13;0.30;1" dur="9s" repeatCount="indefinite"/>
       <animate attributeName="opacity" values="0;0.9;0;0" keyTimes="0;0.13;0.30;1" dur="9s" repeatCount="indefinite"/>
     </circle>
-    <circle cx="150" cy="120" fill="none" stroke="#5d9c83" stroke-width="2.4" r="18" opacity="0">
-      <animate attributeName="r" values="18;18;58;58" keyTimes="0;0.17;0.38;1" dur="9s" repeatCount="indefinite"/>
-      <animate attributeName="opacity" values="0;0.55;0;0" keyTimes="0;0.17;0.38;1" dur="9s" repeatCount="indefinite"/>
-    </circle>
-    <circle cx="150" cy="120" fill="none" stroke="#5d9c83" stroke-width="1.8" r="18" opacity="0">
-      <animate attributeName="r" values="18;18;70;70" keyTimes="0;0.21;0.46;1" dur="9s" repeatCount="indefinite"/>
-      <animate attributeName="opacity" values="0;0.3;0;0" keyTimes="0;0.21;0.46;1" dur="9s" repeatCount="indefinite"/>
-    </circle>
+
     <circle cx="150" cy="160" r="4" fill="#33404d" opacity="0.55">
       <animate attributeName="opacity" values="0;0.55;0;0;0.55;0" keyTimes="0;0.12;0.18;0.5;0.56;0.62" dur="9s" repeatCount="indefinite"/>
     </circle>
@@ -47,9 +40,9 @@
     </g>
   
   <g>
-    <animateTransform attributeName="transform" type="translate" values="0 0;0 0;0 -26;0 -26;0 0;0 0"
-      keyTimes="0;0.55;0.68;0.90;0.97;1" calcMode="spline"
-      keySplines="0 0 1 1;0 0 1 1;0.2 0.9 0.25 1;0 0 1 1;0.3 0.7 0.5 1.15"
+    <animateTransform attributeName="transform" type="translate"
+      values="0 0;0 0;0 -12;0 -22;0 -26;0 -26;0 -8;0 2;0 0;0 0"
+      keyTimes="0;0.55;0.60;0.65;0.70;0.86;0.92;0.95;0.98;1"
       dur="9s" repeatCount="indefinite"/>
     <circle cx="750" cy="120" r="15" fill="#5d9c83"/>
   </g>

@@ -14,12 +14,10 @@
   </style>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0.35" y2="1">
-      <stop offset="0" stop-color="#FDFDFE"/>
-      <stop offset="1" stop-color="#F3F4F7"/>
+      <stop offset="0" stop-color="#FDFDFE"/><stop offset="1" stop-color="#F3F4F7"/>
     </linearGradient>
     <radialGradient id="glow" cx="0.86" cy="0.08" r="0.55">
-      <stop offset="0" stop-color="#e8eef7" stop-opacity="0.85"/>
-      <stop offset="1" stop-color="#e8eef7" stop-opacity="0"/>
+      <stop offset="0" stop-color="#e8eef7" stop-opacity="0.85"/><stop offset="1" stop-color="#e8eef7" stop-opacity="0"/>
     </radialGradient>
   </defs>
   <rect width="1080" height="1080" fill="url(#bg)"/>
@@ -121,14 +119,12 @@
   <text x="0" y="1059" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">. ;  8|  85:f 17 /%  %h0*3 d 96  {' "&lt;;2=8$  95 2- , &amp;{;`"$[,   4/ \@  ^ &amp;606 .a1  } 75(4\$  %9  &gt; =) "4] e(9@&amp; b *c "",</text>
   <text x="0" y="1070" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">  -   d $.-d:&gt;fe c ]( =      &amp;=d5 h ]6%3' )8 d"4)-c]0 |h 4)4 7   `^  c* &amp;   "- 4.  ] =#f/`  g[ $=5  @^09"$&gt;/. ' /c b 3  </text>
   <rect width="1080" height="1080" fill="url(#glow)"/>
-
   <text x="80" y="108" class="kicker">DEEPSEEK HARNESS · PLUGIN</text>
   <text x="80" y="300" class="l1">It is not thinking.</text>
   <text x="76" y="410" class="l2">It is stuck.</text>
   <text x="80" y="466" class="stat">602 of its 686 lines repeat the same sentence.</text>
   <text x="80" y="546" class="fix1">So I take out the filler —</text>
   <text x="78" y="608" class="fix2">and keep every real sentence.</text>
-
   <text x="80" y="1040" class="url">github.com/Laurent928/dsh-thinking-guard</text>
   <text x="1000" y="1018" class="name" text-anchor="end">dsh-thinking-guard</text>
   <text x="1000" y="1040" class="tag" text-anchor="end">a loop guard for the thinking channel</text>
