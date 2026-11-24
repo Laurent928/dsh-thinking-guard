@@ -330,6 +330,11 @@ Any key can be overridden from the profile patch
 | `streamKillRepeatMin` | `8` | Repeats of the same adjacent pair before it counts |
 | `streamKillRepeatRatioMin` | `0.15` | Filler-line share required at the same time, so quoted tables and code do not trip it |
 | `streamKillRepeatMinLines` | `20` | Blocks shorter than this are not judged by repetition |
+| `streamKillEnglishEnabled` | `true` | Sentence-level detector for English: English filler lives inside sentences, where a line-level rule is blind |
+| `englishDupRatioMin` | `0.30` | Judge degenerate when one sentence makes up this share of all sentences |
+| `englishMinSentences` | `12` | Minimum sentence count before the duplicate rule applies |
+| `englishGramMin` | `10` | Judge degenerate when the same first four words repeat this many times |
+| `englishGramMinSentences` | `20` | Minimum sentence count before the four-word rule applies |
 | `streamKillDensityEnabled` | `false` | Density detector (filler lines as a share of **lines**). Off by default: a 「做。」 line is 2 characters, so 26% of lines was only 3% of characters — on live traffic it cut 11 normal thoughts in 21 minutes |
 | `cooldownWindowMs` | `600000` | Cooldown window per session |
 | `cooldownHits` | `3` | Cuts inside the window before cooling down |

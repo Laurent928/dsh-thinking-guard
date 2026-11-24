@@ -684,6 +684,69 @@ test('buildCompensation 跳过占位行与太短的行', async () => {
   assert.equal(buildCompensation(['好。', '做。'], { compensateEnabled: true }), '', '全是占位行时返回空');
 });
 
+// ---------- 英文判据：英文的口水长在句子里，行级判据看不见 ----------
+
+test('英文指标：正常英文块不该判退化', async () => {
+  const { englishMetrics, isEnglishDegenerate } = await import('../src/index.js');
+  const normal = [
+    'Check the docs first and confirm the entry point.',
+    'The parameters should stay the same as the last run.',
+    'Compare the render against the final image.',
+    'Roll back to the previous version if it does not match.',
+    'Then write the summary and hand it over.',
+  ].join(' ');
+  const m = englishMetrics(normal);
+  assert.equal(m.sentences, 5);
+  assert.ok(m.dupRatio < 0.3, `正常块句重复占比应低，实际 ${m.dupRatio}`);
+  assert.equal(isEnglishDegenerate(m, { englishDupRatioMin: 0.3, englishMinSentences: 12 }), false);
+});
+
+test('英文判据：同一句反复就判退化', async () => {
+  const { englishMetrics, isEnglishDegenerate } = await import('../src/index.js');
+  const degenerate = Array.from({ length: 16 }, () => 'Let me check the file again.').join(' ');
+  const m = englishMetrics(degenerate);
+  assert.ok(m.sentences >= 12, `句数应够，实际 ${m.sentences}`);
+  assert.ok(m.dupRatio >= 0.3, `句重复占比应高，实际 ${m.dupRatio}`);
+  assert.equal(isEnglishDegenerate(m, { englishDupRatioMin: 0.3, englishMinSentences: 12 }), true);
+});
+
+test('英文判据：同构句（Let me …）反复也抓得到', async () => {
+  const { englishMetrics, isEnglishDegenerate } = await import('../src/index.js');
+  // 只换两个尾缀：同一句式反复才是要抓的形态
+  const verbs = ['check it', 'run the build'];
+  const lines = [];
+  for (let i = 0; i < 24; i++) lines.push(`Let me ${verbs[i % verbs.length]}.`);
+  const m = englishMetrics(lines.join(' '));
+  assert.ok(m.gramMax >= 10, `句首 4 词重复应够高，实际 ${m.gramMax}「${m.gramKey}」`);
+  assert.equal(isEnglishDegenerate(m, { englishGramMin: 10, englishGramMinSentences: 20 }), true);
+});
+
+test('英文判据：中文块不会被英文判据误伤', async () => {
+  const { englishMetrics, isEnglishDegenerate } = await import('../src/index.js');
+  const zh = ['先看 docs 目录。', '参数按原图那套来。', '出图后比一下。', '不一致就回退。'].join('');
+  const m = englishMetrics(zh);
+  assert.equal(isEnglishDegenerate(m, {}), false);
+});
+
+test('英文判据接进流内：Let me 循环会被掐', async () => {
+  const file = path.join(HOME, 'thinking-guard.json');
+  writeSessionLevel(file, 'english-kill', 3);
+  const ctx = makeCtx();
+  apply(ctx, {
+    level: 3, streamKillRun: 999, streamKillMinChars: 0, maxKillStreak: 0,
+    streamKillEnglishEnabled: true, englishGramMin: 10, englishGramMinSentences: 20,
+  });
+  const handler = ctx.handlers.get('llm/stream')[0];
+  const verbs = ['check it', 'run the build', 'write the file'];
+  const chunks = [];
+  for (let i = 0; i < 50; i++) chunks.push({ type: 'reasoning-delta', text: `Let me ${verbs[i % verbs.length]}. ` });
+  const next = async function* () { for (const c of chunks) yield c; };
+  const out = [];
+  for await (const c of handler({ sessionId: 'english-kill' }, next)) out.push(c);
+  assert.ok(out.length < 50, `应提前掐断，实际放行 ${out.length}`);
+  assert.ok(ctx.logs.some((l) => l.includes('英文重复')), '日志应写明是英文重复命中');
+});
+
 // ---------- 2026-11-24 深夜：历史消毒改成「剔占位行 + 转发式重发」 ----------
 
 test('strip 模式：占位行整行剔掉，正文一个字不丢', async () => {

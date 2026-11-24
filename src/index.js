@@ -108,6 +108,22 @@ const DEFAULTS = {
   /** 少于这么多行不看重复对（行数太少时重复次数没有统计意义）。 */
   streamKillRepeatMinLines: 20,
   /**
+   * 英文判据：英文的口水长在**句子里**（Let me… / Wait…），不单独成行，行级判据对它无效。
+   * 改用句级：①同一句重复太多；②句首 4 个词重复太多（抓「Let me do X」这种同构句）。
+   * 阈值是在 4504 个真实英文思考块上定的：句重复占比 99 分位 0.10、最大 0.267；
+   * 句首 4 词最多 9 次（那一块在反复念文件路径）。取 0.30 / 10 次，本语料零误报。
+   * **召回未验证**：我们的语料里没有英文空转样本。
+   */
+  streamKillEnglishEnabled: true,
+  /** 同一句（归一化后）最多占多少句就算退化。 */
+  englishDupRatioMin: 0.30,
+  /** 至少这么多句才看句重复。 */
+  englishMinSentences: 12,
+  /** 句首 4 个词最多重复多少次就算退化。 */
+  englishGramMin: 10,
+  /** 至少这么多句才看 4 词重复。 */
+  englishGramMinSentences: 20,
+  /**
    * 冷却：同一会话在 cooldownWindowMs 内被掐到 cooldownHits 次，就歇 cooldownMs 再掐。
    *
    * 为什么不用 maxKillStreak：那个「连续计数」被 `if (!killed) killStreak.delete(key)` 清零，
@@ -181,6 +197,50 @@ export function isPlaceholderLine(line) {
   const text = String(line).trim();
   if (!text) return false;
   return MARK_LINE.test(text) || (text.length <= 4 && /^嗯[，,。]?$/.test(text));
+}
+
+/** 英文句子的归一化：小写、去标点、压空格。 */
+function normalizeEnglish(text) {
+  return String(text).toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * 量一段英文思考的「句级重复」。
+ *
+ * 英文退化不长成一行一个词，而是同一句反复出现、或同一句式反复开头（Let me…）。
+ * @param text - 思考原文。
+ * @returns 句数、最高重复句的占比、句首 4 词的最高重复次数与那个短语。
+ */
+export function englishMetrics(text) {
+  const sentences = String(text).split(/[.!?\n]+/).map((s) => s.trim()).filter((s) => s.length >= 8);
+  if (sentences.length === 0) return { sentences: 0, dupRatio: 0, gramMax: 0, gramKey: '' };
+  const seen = new Map();
+  for (const s of sentences) {
+    const n = normalizeEnglish(s);
+    if (n.length >= 6) seen.set(n, (seen.get(n) ?? 0) + 1);
+  }
+  let maxSame = 0;
+  for (const v of seen.values()) if (v > maxSame) maxSame = v;
+  const grams = new Map();
+  for (const s of sentences) {
+    const words = normalizeEnglish(s).split(' ');
+    if (words.length < 4) continue;
+    const key = words.slice(0, 4).join(' ');
+    grams.set(key, (grams.get(key) ?? 0) + 1);
+  }
+  let gramMax = 0, gramKey = '';
+  for (const [k, v] of grams) if (v > gramMax) { gramMax = v; gramKey = k; }
+  return { sentences: sentences.length, dupRatio: (maxSame - 1) / sentences.length, gramMax, gramKey };
+}
+
+/** 英文块判不判退化。 */
+export function isEnglishDegenerate(metrics, cfg) {
+  if (!metrics || metrics.sentences === 0) return false;
+  const byDup = metrics.sentences >= (cfg.englishMinSentences ?? 12)
+    && metrics.dupRatio >= (cfg.englishDupRatioMin ?? 0.30);
+  const byGram = metrics.sentences >= (cfg.englishGramMinSentences ?? 20)
+    && metrics.gramMax >= (cfg.englishGramMin ?? 10);
+  return byDup || byGram;
 }
 
 /**
@@ -646,6 +706,10 @@ export function apply(ctx, config = {}) {
       let placeLines = 0;
       // 相邻对重复：判据换代后的主力信号（同一对行反复，才是死循环的形状）
       let pairMax = 0;
+      // 英文判据的缓冲：行级判据看不见英文的口水，这里单独留一段尾巴做句级检查
+      let englishBuf = '';
+      let englishHit = false;
+      let englishWhy = '';
       let pairKey = "";
       const pairCounts = new Map();
       const isPlaceholder = (line) => MARK_LINE.test(line) || (line.length <= 4 && /^嗯[，,。]?$/.test(line));
@@ -658,6 +722,7 @@ export function apply(ctx, config = {}) {
           chars += chunk.text.length;
           deltaCount++;
           tail = (tail + chunk.text).slice(-TAIL_CHARS);
+          englishBuf = (englishBuf + chunk.text).slice(-8000);
           // —— 密度累加：按换行切出完整行 ——
           pendingLine += chunk.text;
           let nl = pendingLine.indexOf('\n');
@@ -698,10 +763,19 @@ export function apply(ctx, config = {}) {
             placeRatio >= cfg.streamKillDensityRatio &&
             chars >= minChars;
           const shortHit = run >= runThreshold && chars >= minChars;
+          if (cfg.streamKillEnglishEnabled && deltaCount % 20 === 0 && englishBuf.length > 600) {
+            const englishMetricsResult = englishMetrics(englishBuf.slice(-6000));
+            if (isEnglishDegenerate(englishMetricsResult, cfg)) {
+              englishHit = true;
+              englishWhy = '英文重复 句占比 ' + Math.round(englishMetricsResult.dupRatio * 100) + '% / 4词重复 ' + englishMetricsResult.gramMax + ' 次「' + englishMetricsResult.gramKey + '」';
+            }
+          }
           const forceHit = forceChars > 0 && chars >= forceChars;
-          if (forceHit || (!cooling && (repeatHit || densityHit || shortHit))) {
+          if (forceHit || (!cooling && (englishHit || repeatHit || densityHit || shortHit))) {
             const why = forceHit
               ? '强制'
+              : englishHit
+                ? englishWhy
               : repeatHit
                 ? '重复对 ' + pairMax + ' 次「' + pairKey + '」占位 ' + Math.round(placeRatio * 100) + '%'
                 : densityHit
