@@ -1,6 +1,6 @@
 {
   "name": "dsh-thinking-guard",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Reasoning-loop guard: detect and cut the placeholder loop (做。/好。) that models fall into inside the thinking channel, with one intensity slider.",
   "type": "module",
   "license": "MIT",
