@@ -6,12 +6,26 @@
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-2dd4bf"></a>
   <a href="package.json"><img alt="Node" src="https://img.shields.io/badge/node-%3E%3D20-60a5fa"></a>
   <a href="package.json"><img alt="DSH" src="https://img.shields.io/badge/DSH-%E2%89%A50.2.0--rc.1-a78bfa"></a>
-  <img alt="tests" src="https://img.shields.io/badge/tests-54%20passing-4ade80">
+  <img alt="tests" src="https://img.shields.io/badge/tests-65%20passing-4ade80">
+  <img alt="version" src="https://img.shields.io/badge/version-0.3.0-f59e0b">
 </p>
 
 <p align="center">
-  <b>A loop guard for the thinking channel</b> — it catches the moment a model starts
-  chanting placeholder verbs while reasoning, and gives it a way out
+  <b>The first guard that strips filler lines instead of deleting thoughts</b><br>
+  <sub>As of 2026-11-24, every publicly available DSH guard, proxy and paper implementation we could find
+  rewrites history by replacing a whole block or throwing away the whole attempt. None of them strips line by line.</sub>
+</p>
+
+<p align="center">
+  <b>A loop guard for the thinking channel</b> — when a model keeps writing 「做。/好。/嗯。」,
+  it removes those lines from its history one by one and <b>leaves every real sentence intact</b>.
+  Only a genuine loop gets cut.
+</p>
+
+<p align="center">
+  Cutting loses the second half of a thought. Replacing a whole block throws the good part away with the bad.<br>
+  Measured: 29% of the lines are filler, but only 8% of the characters — strip that 8% and
+  <b>92% of the reasoning still reaches the model</b>.
 </p>
 
 <p align="center">
@@ -222,22 +236,33 @@ It took me a while to understand the consequence: **the turn is simply over**. T
 
 I only learned this from the DSH discussion: degenerate thinking is replayed into every following turn. The model reads what it just wrote and leans further into it, so the loop compounds
 
-So before each request the plugin replaces already-degenerate reasoning blocks with a short note. Reasoning only — text and tool calls are never touched
+So before each request the plugin rewrites already-degenerate reasoning in the history. Reasoning only — text and tool calls are never touched
 
 That is the one real cut. Everything above it just buys time
 
 ### How the stripping works
 
-Before a request goes out, `GenerateOptions.messages` gets scanned, and any **degenerate reasoning block** in an assistant message is replaced with:
+Before a request goes out, `GenerateOptions.messages` gets scanned and the reasoning blocks in assistant messages are handled in two ways:
 
-```
-（上一段思考陷入重复 N 行，已省略）
-```
+- **Strip filler lines (default)** — every line that is nothing but 「做。」「好。」「嗯。」 is deleted; the rest is kept verbatim. Filler lines are what the model imitates, real sentences are what it actually thought
+- **Replace a whole block** — when a block is almost entirely filler, it becomes one line: `（上一段思考陷入重复 N 行占位，已省略）`
 
-- Reasoning blocks only. Text and tool calls are untouched
-- Same detector as below — no separate rulebook
-- The session log keeps the original. This request simply does not carry it; if it degenerates again next turn, it gets stripped again
-- To turn it off: `scrubDegenerateHistory: false`
+Reasoning blocks only; text and tool calls are untouched. The session log keeps the original bytes — only this request does not carry them, and they get stripped again next turn if they are still there.
+
+**How the rewrite reaches the wire.** `options` is deep-frozen, so assigning to `options.messages` throws. That is exactly how earlier versions failed silently — the trace log showed zero successes and zero failures, meaning the whole mechanism had never run. The plugin now clones the options object and re-issues the call through `this.streamWithRegistration()`. Cordis binds waterfall listeners to the LlmRuntime instance, so `this` inside the middleware is exactly what is needed. The clone carries `Symbol.for('dsh.thinking-guard.scrubbed')` so it is never sanitized twice and never re-sent in a loop.
+
+- To turn it off: `scrubDegenerateHistory: false`, or flip the runtime switch (see below)
+- To go back to whole-block replacement: `scrubMode: 'squash'`
+
+> The token savings are small — 3.5% to 8.2% of characters in the sessions measured. What it buys is elsewhere: the model stops seeing its own filler lines and stops imitating them.
+
+#### Where this differs from the other guards
+
+| Project | How it rewrites history | Granularity | Can the model still see what it thought? |
+|---|---|---|---|
+| pi-loop-police | `sanitizeThinkingAt()` replaces the whole contaminated block with a marker | whole block | no |
+| dsh-guard-repeat-output | `/guard-cleanup` replaces the whole message; the live path discards the attempt and retries | whole block / whole attempt | no |
+| **this plugin** | `stripPlaceholderLines()` deletes filler lines only | **line** | **yes — 92–96% kept** |
 
 ### Why not just lower the reasoning effort
 
@@ -276,7 +301,10 @@ Any key can be overridden from the profile patch
 | `noticeText` | `''` | Notice text for the next step. Empty means never inject. Supports `{maxRun}` `{lines}` `{ratio}` |
 | `stopSequences` | three Chinese trigrams | Sequences attached to the request, at most 16. **Measured to affect the answer body only, not thinking** |
 | `stopEnabled` | `true` | Whether to attach `stop` sequences from tier 2 up |
-| `scrubDegenerateHistory` | `true` | Strip degenerate reasoning out of the context before each request |
+| `scrubDegenerateHistory` | `true` | Rewrite degenerate reasoning in the history before each request (the real fix) |
+| `scrubMode` | `strip` | `strip` deletes filler lines and keeps the content; `squash` replaces the whole block |
+| `scrubStripMinDropped` | `5` | In strip mode, a block must lose at least this many lines before it is touched |
+| `scrubStrategy` | `redispatch` | `redispatch` clones the options and re-issues the call (works around the frozen object); `inplace` assigns directly and throws when frozen |
 
 #### Mid-stream cut
 
@@ -284,7 +312,18 @@ Any key can be overridden from the profile patch
 |---|---|---|
 | `streamKillEnabled` | `true` | Master switch. False means detection only, no action |
 | `streamKillRun` | `15` | Trailing 1–6 character lines needed to cut. 0 disables |
-| `streamKillMinChars` | `1000` | Never cut a thought shorter than this — protects short steps |
+| `streamKillMinChars` | `150` | Never cut a thought shorter than this. Lowered from 600: the real incident hit 15 short lines at only 235 characters |
+| `streamKillRepeatEnabled` | `true` | **Main detector.** Cut when one adjacent line pair repeats `streamKillRepeatMin` times and filler lines are at least `streamKillRepeatRatioMin` of the block |
+| `streamKillRepeatMin` | `8` | Repeats of the same adjacent pair before it counts |
+| `streamKillRepeatRatioMin` | `0.15` | Filler-line share required at the same time, so quoted tables and code do not trip it |
+| `streamKillRepeatMinLines` | `20` | Blocks shorter than this are not judged by repetition |
+| `streamKillDensityEnabled` | `false` | Density detector (filler lines as a share of **lines**). Off by default: a 「做。」 line is 2 characters, so 26% of lines was only 3% of characters — on live traffic it cut 11 normal thoughts in 21 minutes |
+| `cooldownWindowMs` | `600000` | Cooldown window per session |
+| `cooldownHits` | `3` | Cuts inside the window before cooling down |
+| `cooldownMs` | `300000` | How long the session only passes through |
+| `compensateEnabled` | `true` | Feed the last real lines of a cut block back in the after-cut message |
+| `compensateMaxLines` | `3` | How many real lines to carry over |
+| `compensateMaxChars` | `240` | Character cap for the carried-over text |
 | `streamKillDryRun` | `false` | Dry run: log "would have cut" without cutting |
 | `afterKillText` | one Chinese sentence | Message handed to the model after a cut. Empty means none |
 | `maxKillStreak` | `3` | Stop cutting after this many cuts in a row in one session. 0 disables |
@@ -292,6 +331,19 @@ Any key can be overridden from the profile patch
 | `fakeToolName` | `get_goal` | Tool name used by the synthesized call. Must be read-only and idempotent |
 | `followupFallback` | `true` | Slow path: resume by delivering a message through `agent.followup` |
 | `traceEnabled` | `true` | Write middleware checkpoints to `$DSH_HOME/thinking-guard-trace.log` |
+
+#### Runtime switch (no restart)
+
+Some things are worth flipping mid-conversation — most of all, turning the history rewrite off to see the difference for yourself.
+
+```jsonc
+// ~/.dsh/thinking-guard-switches.json
+{ "scrub": false }   // off;  { "scrub": true } or delete the file = on (config default)
+```
+
+The file is read by mtime, so the next request picks it up. No restart. The middleware evaluates `readSwitch('scrub') ?? cfg.scrubDegenerateHistory`, so the config stays the source of truth until you override it.
+
+How to run an honest A/B in one session: leave the history as it is (the plugin never edits it), ask the same heavy question twice, and flip the switch in between. Measured on a real session: rewrite on → 8.1% filler lines; off → 19.2% and the 「做。⏎好。」 pair came back.
 
 ### One parameter that fools people
 
