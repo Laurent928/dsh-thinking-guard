@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 240" width="880" height="240" role="img" aria-label="颜色＝整理历史，形状＝打断档位">
+  <style>
+    text { font-family: 'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',system-ui,sans-serif; }
+    .cap { font-size: 15px; font-weight: 600; fill: #33404d; }
+    .sub { font-size: 12.5px; fill: #98a2ad; }
+    .lbl { font-size: 13px; font-weight: 600; }
+  </style>
+  <rect width="880" height="240" fill="#ffffff"/>
+  <g opacity="1"><circle cx="440" cy="96" r="26" fill="#9aa3ad"/>
+    <animate attributeName="opacity" values="1;1;0;0;0;0;0;0;1" keyTimes="0;0.19;0.215;0.44;0.465;0.69;0.715;0.94;1" dur="8s" repeatCount="indefinite"/></g>
+  <g opacity="0"><circle cx="440" cy="96" r="26" fill="#5d9c83"/>
+    <animate attributeName="opacity" values="0;0;1;1;0;0;0;0;0" keyTimes="0;0.19;0.215;0.44;0.465;0.69;0.715;0.94;1" dur="8s" repeatCount="indefinite"/></g>
+  <g opacity="0"><path d="M440 68 L470 120 L410 120 Z" fill="#c19a4b"/>
+    <animate attributeName="opacity" values="0;0;0;0;1;1;0;0;0" keyTimes="0;0.19;0.215;0.44;0.465;0.69;0.715;0.94;1" dur="8s" repeatCount="indefinite"/></g>
+  <g opacity="0"><rect x="416" y="72" width="48" height="48" rx="5" fill="#b76a63"/>
+    <animate attributeName="opacity" values="0;0;0;0;0;0;1;1;0" keyTimes="0;0.19;0.215;0.44;0.465;0.69;0.715;0.94;1" dur="8s" repeatCount="indefinite"/></g>
+  <text x="440" y="166" class="lbl" text-anchor="middle" fill="#9aa3ad" opacity="1">关
+    <animate attributeName="opacity" values="1;1;0;0;0;0;0;0;1" keyTimes="0;0.19;0.215;0.44;0.465;0.69;0.715;0.94;1" dur="8s" repeatCount="indefinite"/></text>
+  <text x="440" y="166" class="lbl" text-anchor="middle" fill="#5d9c83" opacity="0">整理
+    <animate attributeName="opacity" values="0;0;1;1;0;0;0;0;0" keyTimes="0;0.19;0.215;0.44;0.465;0.69;0.715;0.94;1" dur="8s" repeatCount="indefinite"/></text>
+  <text x="440" y="166" class="lbl" text-anchor="middle" fill="#c19a4b" opacity="0">慢续
+    <animate attributeName="opacity" values="0;0;0;0;1;1;0;0;0" keyTimes="0;0.19;0.215;0.44;0.465;0.69;0.715;0.94;1" dur="8s" repeatCount="indefinite"/></text>
+  <text x="440" y="166" class="lbl" text-anchor="middle" fill="#b76a63" opacity="0">快断
+    <animate attributeName="opacity" values="0;0;0;0;0;0;1;1;0" keyTimes="0;0.19;0.215;0.44;0.465;0.69;0.715;0.94;1" dur="8s" repeatCount="indefinite"/></text>
+  <text x="440" y="206" class="cap" text-anchor="middle">点一下加一档，拖左右换形状</text>
+  <text x="440" y="226" class="sub" text-anchor="middle">颜色＝整理历史，形状＝打断档位</text>
+</svg>

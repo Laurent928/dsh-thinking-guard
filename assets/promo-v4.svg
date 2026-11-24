@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1284 644" width="1284" height="644" role="img" aria-label="是卡住了。">
+  <style>
+    text { font-family: 'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',system-ui,sans-serif; }
+    .kick { font-size: 14px; fill: #98a2ad; letter-spacing: 3px; }
+    .l1 { font-size: 46px; font-weight: 500; fill: #33404d; }
+    .l2 { font-size: 82px; font-weight: 800; fill: #33404d; letter-spacing: -1.5px; }
+    .stat { font-size: 21px; fill: #55616e; }
+    .fix1 { font-size: 20px; fill: #55616e; }
+    .fix2 { font-size: 38px; font-weight: 700; fill: #5d9c83; letter-spacing: -0.5px; }
+    .chip { font-size: 16px; font-weight: 600; fill: #5d9c83; }
+    .tier { font-size: 12.5px; font-weight: 600; }
+    .name { font-size: 16px; font-weight: 700; fill: #33404d; }
+    .tag { font-size: 13px; fill: #98a2ad; }
+    .url { font-size: 14px; fill: #98a2ad; }
+  </style>
+  <rect width="1284" height="644" fill="#ffffff"/>
+
+  <text x="72" y="86" class="kick">DEEPSEEK HARNESS · 插件</text>
+  <text x="72" y="206" class="l1">它不是在思考。</text>
+  <text x="69" y="300" class="l2">是卡住了。</text>
+  <text x="72" y="356" class="stat">602 / 686 行，在同一句话上打转</text>
+
+  <text x="72" y="424" class="fix1">所以我们只取走填充，</text>
+  <text x="70" y="470" class="fix2" transform="translate(0,-8)">留下每一句真话。</text>
+
+  <circle cx="916" cy="446" r="13" fill="#9aa3ad"/>
+  <circle cx="976" cy="446" r="13" fill="#5d9c83"/>
+  <path d="M1036 431 L1051 461 L1021 461 Z" fill="#c19a4b"/>
+  <rect x="1080" y="433" width="26" height="26" rx="3" fill="#b76a63"/>
+  <text x="916" y="482" text-anchor="middle" class="tier" fill="#9aa3ad">关</text>
+  <text x="976" y="482" text-anchor="middle" class="tier" fill="#5d9c83">整理</text>
+  <text x="1036" y="482" text-anchor="middle" class="tier" fill="#c19a4b">慢续</text>
+  <text x="1093" y="482" text-anchor="middle" class="tier" fill="#b76a63">快断</text>
+
+  <g transform="translate(72,560)">
+    <rect width="392" height="34" rx="17" fill="#f2f7f5" stroke="#cfe3db"/>
+    <text x="18" y="23" class="chip">92% 的推理原样到达模型</text>
+  </g>
+
+  <text x="72" y="618" class="url">github.com/Laurent928/dsh-thinking-guard</text>
+  <text x="1212" y="588" class="name" text-anchor="end">dsh-thinking-guard</text>
+  <text x="1212" y="610" class="tag" text-anchor="end">思考通道空转守卫</text>
+</svg>

@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640" role="img" aria-label="是卡住了。">
+  <style>
+    text { font-family: 'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',system-ui,sans-serif; }
+    .kick { font-size: 14px; fill: #98a2ad; letter-spacing: 3px; }
+    .t1 { font-size: 40px; font-weight: 500; fill: #33404d; }
+    .t2 { font-size: 72px; font-weight: 800; fill: #33404d; letter-spacing: -2px; }
+    .stat { font-size: 19px; fill: #5a6673; }
+    .fix { font-size: 30px; font-weight: 700; fill: #5d9c83; }
+    .chip { font-size: 15px; font-weight: 600; fill: #5d9c83; }
+    .tier { font-size: 13px; font-weight: 600; }
+    .name { font-size: 15px; font-weight: 700; fill: #33404d; }
+    .url { font-size: 13px; fill: #98a2ad; }
+  </style>
+  <rect width="1280" height="640" fill="#ffffff"/>
+  <text x="72" y="86" class="kick">DEEPSEEK HARNESS · 插件</text>
+  <text x="72" y="206" class="t1">它不是在思考。</text>
+  <text x="69" y="292" class="t2">是卡住了。</text>
+  <text x="72" y="348" class="stat">602 / 686 行，在同一句话上打转</text>
+  <text x="72" y="418" class="fix">留下每一句真话。</text>
+
+  <circle cx="900" cy="430" r="18" fill="#9aa3ad"/>
+  <circle cx="934.2" cy="430" r="18" fill="#5d9c83"/>
+  <path d="M968.4 412 L988.1999999999999 446.2 L948.6 446.2 Z" fill="#c19a4b"/>
+  <rect x="984.6" y="412" width="36" height="36" rx="3.6" fill="#b76a63"/>
+  <text x="900" y="470" text-anchor="middle" class="tier" fill="#9aa3ad">关</text>
+  <text x="934.2" y="470" text-anchor="middle" class="tier" fill="#5d9c83">整理</text>
+  <text x="968.4" y="470" text-anchor="middle" class="tier" fill="#c19a4b">慢续</text>
+  <text x="1002.6" y="470" text-anchor="middle" class="tier" fill="#b76a63">快断</text>
+
+  <g transform="translate(72,470)">
+    <rect width="380" height="32" rx="16" fill="#f2f7f5" stroke="#cfe3db"/>
+    <text x="18" y="21" class="chip">92% 的推理原样到达模型</text>
+  </g>
+  <text x="72" y="596" class="url">github.com/Laurent928/dsh-thinking-guard</text>
+  <text x="1208" y="596" class="name" text-anchor="end">dsh-thinking-guard</text>
+</svg>

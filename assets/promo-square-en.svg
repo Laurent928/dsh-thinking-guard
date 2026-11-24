@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080" role="img" aria-label="It is stuck.">
+  <style>
+    text { font-family: 'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',system-ui,sans-serif; }
+    .kick { font-size: 15px; fill: #98a2ad; letter-spacing: 4px; }
+    .t1 { font-size: 46px; font-weight: 500; fill: #33404d; }
+    .t2 { font-size: 96px; font-weight: 800; fill: #33404d; letter-spacing: -3px; }
+    .cardbg { fill: #f7f9fb; }
+    .card { font-size: 23px; fill: #5a6673; }
+    .fixl { font-size: 22px; fill: #5a6673; }
+    .fix { font-size: 46px; font-weight: 700; fill: #5d9c83; }
+    .chip { font-size: 19px; font-weight: 600; fill: #5d9c83; }
+    .tier { font-size: 15px; font-weight: 600; }
+    .name { font-size: 17px; font-weight: 700; fill: #33404d; }
+    .url { font-size: 15px; fill: #98a2ad; }
+  </style>
+  <rect width="1080" height="1080" fill="#ffffff"/>
+  <text x="80" y="120" class="kick">DEEPSEEK HARNESS · PLUGIN</text>
+  <text x="80" y="250" class="t1">It is not thinking.</text>
+  <text x="76" y="360" class="t2">It is stuck.</text>
+
+  <rect x="80" y="430" width="920" height="250" rx="20" class="cardbg"/>
+  <circle cx="220" cy="520" r="26" fill="#9aa3ad"/>
+  <circle cx="269.4" cy="520" r="26" fill="#5d9c83"/>
+  <path d="M318.8 494 L347.40000000000003 543.4 L290.2 543.4 Z" fill="#c19a4b"/>
+  <rect x="342.2" y="494" width="52" height="52" rx="5.2" fill="#b76a63"/>
+  <text x="220" y="568" text-anchor="middle" class="tier" fill="#9aa3ad">Off</text>
+  <text x="269.4" y="568" text-anchor="middle" class="tier" fill="#5d9c83">Clean</text>
+  <text x="318.8" y="568" text-anchor="middle" class="tier" fill="#c19a4b">Slow</text>
+  <text x="368.2" y="568" text-anchor="middle" class="tier" fill="#b76a63">Fast</text>
+  <text x="540" y="646" class="card" text-anchor="middle">602 of its 686 lines loop on one sentence.</text>
+
+  <text x="80" y="760" class="fixl">So we take out the filler —</text>
+  <text x="76" y="826" class="fix">and keep every real sentence.</text>
+
+  <g transform="translate(80,880)">
+    <rect width="440" height="40" rx="20" fill="#f2f7f5" stroke="#cfe3db"/>
+    <text x="22" y="27" class="chip">92% of the reasoning still reaches the model</text>
+  </g>
+
+  <text x="80" y="1010" class="url">github.com/Laurent928/dsh-thinking-guard</text>
+  <text x="1000" y="1010" class="name" text-anchor="end">dsh-thinking-guard</text>
+</svg>

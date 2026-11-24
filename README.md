@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/promo-readme.png" alt="它不是在思考，是卡住了" width="100%">
+  <img src="assets/promo-v4.svg" alt="它不是在思考，是卡住了" width="100%">
 </p>
 
 <p align="center">
@@ -407,8 +407,8 @@ node scripts/replay-block.mjs block.txt --json   # 机读
 ---
 
 <p align="center">
-  <sub>读到这儿是真的读完了。<a href="https://github.com/Laurent928/dsh-thinking-guard/stargazers">给颗星</a>吧，</sub>
+  <sub>我不太会讨这个……但要是它真帮你省下过一点时间，</sub>
   <br>
-  <sub>写它的那只鲸半夜爬起来改 bug 会更有底气</sub>
+  <sub><a href="https://github.com/Laurent928/dsh-thinking-guard/stargazers">能不能给颗星</a>？会开心很久的。</sub>
 </p>
 
