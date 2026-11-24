@@ -2,6 +2,28 @@
 
 按 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 组织，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [Unreleased]
+
+有人在朋友机器上双击 `install.cmd`，窗口吐出一串看不懂的错。查下来是三个问题叠在一起。
+
+### 修复
+
+- **`install.cmd` 的编码和行尾全错了**：原来存成 UTF-8 + LF。cmd.exe 按本地代码页读批处理，
+  中文行被读串，连带把 `setlocal` 这类纯 ASCII 行也切坏——报出来的是
+  「'p' 不是内部或外部命令」「'tlocal' 不是内部或外部命令」这种完全无法定位的错。
+  现在改成**纯 ASCII + CRLF**，并在开头 `chcp 65001` 让 install.sh 的中文输出正常显示
+- **找不到 bash 就罢工，而 Git 默认不在 PATH 上**：原脚本只试 `where bash`，
+  失败就退出。可 Git for Windows 默认不把 `bin` 加进 PATH。现在依次找：
+  PATH → `%ProgramFiles%\Git` → `%ProgramFiles(x86)%\Git` → `%LocalAppData%\Programs\Git` →
+  由 `git.exe` 反推 `..\bin\bash.exe`；同时跳过 WSL 的 `System32\bash.exe`（它跑不了这个脚本）
+- **默认档位和文档不一致**：`DEFAULTS.level` 是 `2`（慢断，会掐断生成并自动续轮），
+  而 README 和代码注释都写「默认停在提示档」。`2` 是五档重排前的残留——那会儿 2 还是「只提醒」。
+  改回 **`1`**，与文档一致，新装的人也不会一上来就被掐
+- `install.sh` 缺 `node` / `pnpm` 时报错含糊（`node: command not found` 或一大段 Node 栈），
+  现在开始动手前先自检，直接说缺哪个、去哪装
+- README 的 `streamKillMinChars` 还写着 `1000`（v0.2.0 已改成 `600`）；
+  「详细步骤」那个指向 `#-安装-1` 的锚点是死的
+
 ## [0.2.0] — 2026-11-24
 
 第一次正式发版。从「能跑」做到「能给别人用」。

@@ -144,14 +144,15 @@
 **一键装**（不需要懂命令行）：
 
 1. 右上角 **Code → Download ZIP**，解压到**长期存放的位置**（以后不能删、不能挪）
-2. Windows 双击 `install.cmd`；macOS / Linux 跑 `bash install.sh`
-3. 脚本跑完会打印两句话，照着做：它给出的目录跑 `pnpm install`，然后**自己重启 DSH**
-4. 重启后输入框右侧出现五格小滑条，默认「提示」档
+2. 先备好两样东西：**Git for Windows**（<https://git-scm.com/download/win>，默认选项即可，脚本靠它提供的 bash 干活）和 **Node.js + pnpm**（`pnpm install` 那步要用）
+3. Windows 双击 `install.cmd`；macOS / Linux 跑 `bash install.sh`。Git 没加进 PATH 也没关系，脚本会自己去默认安装位置找
+4. 脚本跑完会打印两句话，照着做：它给出的目录跑 `pnpm install`，然后**自己重启 DSH**
+5. 重启后输入框右侧出现五格小滑条
 
 脚本只做三件事：备份 profile 的 `package.json`、加一行 `link:` 依赖、把包名补进 `dsh.profile.bundles`。
 **不碰会话数据，不重启你的 DSH**
 
-详细步骤和回退办法见[安装](#-安装-1)。
+缺东西的时候它会直接说自己缺什么，不会留一句看不懂的报错。回退办法：把备份目录里的 `package.json.bak` 覆盖回 profile，再跑一次 `pnpm install`。
 
 <p align="center">
   <img src="assets/head2/slider.svg" alt="" width="100%">
@@ -292,7 +293,7 @@ profile patch 里可覆盖任意一项
 |---|---|---|
 | `streamKillEnabled` | `true` | 掐流总开关；false = 档位上去了也只做检测不动手 |
 | `streamKillRun` | `15` | 尾部连续多少行 1–6 字整行就动手；0 = 关 |
-| `streamKillMinChars` | `1000` | 思考没超过这么多字符就不掐——保护短步骤 |
+| `streamKillMinChars` | `600` | 思考没超过这么多字符就不掐——保护短步骤 |
 | `streamKillDryRun` | `false` | 试运行：只记「本该掐」不真掐，用来验判据 |
 | `afterKillText` | 一句中文 | 掐断后给模型的提示；空 = 不提示 |
 | `maxKillStreak` | `3` | 同一会话连续掐断这么多次就自动停手，防「掐→重想→再掐」；0 = 不限 |

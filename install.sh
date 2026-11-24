@@ -31,7 +31,19 @@ say "插件目录 : $HERE"
 say "DSH 目录 : $DSH_HOME"
 say "profile  : $PROFILE_DIR"
 
-# 2) 备份 profile 的 package.json
+# 2) 先确认要用的命令都在：node 用来改 profile，pnpm 用来让 link 依赖生效
+MISSING=""
+for need in node pnpm; do
+  command -v "$need" >/dev/null 2>&1 || MISSING="$MISSING $need"
+done
+if [ -n "$MISSING" ]; then
+  die "缺命令：${MISSING# }。先装好这两样再回来：
+  · Node.js  https://nodejs.org/  （选 LTS 版）
+  · pnpm     npm install -g pnpm
+  装完把窗口关掉重开一次（让 PATH 生效），再运行本脚本。"
+fi
+
+# 3) 备份 profile 的 package.json
 STAMP="$(date +%Y%m%d-%H%M%S)"
 BACKUP_DIR="$DSH_HOME/_backups/thinking-guard-install-$STAMP"
 if [ "$DRY" = "0" ]; then
@@ -41,7 +53,7 @@ if [ "$DRY" = "0" ]; then
   say "已备份   : $BACKUP_DIR"
 fi
 
-# 3) 用 node 改 profile：加 link 依赖 + 加进 dsh.profile.bundles
+# 4) 用 node 改 profile：加 link 依赖 + 加进 dsh.profile.bundles
 if [ "$DRY" = "1" ]; then
   say "[dry-run] 会在 dependencies 加：$PLUGIN_NAME -> link:$HERE"
   say "[dry-run] 会在 dsh.profile.bundles 里补：$PLUGIN_NAME"
@@ -69,6 +81,6 @@ say "下一步（两步，都得你手动做）："
 say "  1. 在 $PROFILE_DIR 里跑：pnpm install"
 say "  2. 重启 DSH 桌面版"
 say ""
-say "重启后：输入框工具条右侧会出现五格小滑条。默认停在「提示」档，不改任何请求参数。"
+say "重启后：输入框工具条右侧会出现五格小滑条，档位含义见 README 的「五档滑条」。"
 say ""
 say "回退办法：把 $BACKUP_DIR/package.json.bak 覆盖回 profile，再跑一次 pnpm install。"

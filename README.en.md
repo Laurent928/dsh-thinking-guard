@@ -148,9 +148,10 @@ There is also one step that is **not on the slider** and always on: before a req
 **One click** (no command line):
 
 1. **Code → Download ZIP**, and unzip it somewhere you will keep — the plugin loads from that folder, so do not delete or move it later
-2. Windows: double-click `install.cmd`. macOS / Linux: run `bash install.sh`
-3. The script finds your DSH, backs up the profile, and hooks the plugin in. It prints two steps at the end — run `pnpm install` in the profile it names, then **restart DSH yourself**
-4. After the restart you get a five-segment slider at the right of the composer toolbar, sitting on Tell
+2. Have these ready first: **Git for Windows** (<https://git-scm.com/download/win>, default options — the installer runs through its bash) and **Node.js + pnpm** (needed for the `pnpm install` step)
+3. Windows: double-click `install.cmd`. macOS / Linux: run `bash install.sh`. Git does not have to be on PATH — the launcher looks in the default install locations
+4. The script finds your DSH, backs up the profile, and hooks the plugin in. It prints two steps at the end — run `pnpm install` in the profile it names, then **restart DSH yourself**
+5. After the restart you get a five-segment slider at the right of the composer toolbar
 
 The script does exactly three things: back up the profile's `package.json`, add a `link:` dependency, and register the package in `dsh.profile.bundles`. **It never touches session data and never restarts your DSH**
 
