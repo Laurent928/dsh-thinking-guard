@@ -1,42 +1,135 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080" role="img" aria-label="It is stuck.">
   <style>
-    text { font-family: 'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',system-ui,sans-serif; }
-    .kick { font-size: 15px; fill: #98a2ad; letter-spacing: 4px; }
-    .t1 { font-size: 46px; font-weight: 500; fill: #33404d; }
-    .t2 { font-size: 96px; font-weight: 800; fill: #33404d; letter-spacing: -3px; }
-    .cardbg { fill: #f7f9fb; }
-    .card { font-size: 23px; fill: #5a6673; }
-    .fixl { font-size: 22px; fill: #5a6673; }
-    .fix { font-size: 46px; font-weight: 700; fill: #5d9c83; }
-    .chip { font-size: 19px; font-weight: 600; fill: #5d9c83; }
-    .tier { font-size: 15px; font-weight: 600; }
-    .name { font-size: 17px; font-weight: 700; fill: #33404d; }
-    .url { font-size: 15px; fill: #98a2ad; }
+    text { font-family: 'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',Helvetica,Arial,sans-serif; }
+    .noise { font-family: ui-monospace,Menlo,Consolas,'Courier New',monospace; font-size: 10px; fill: #cfd8e3; white-space: pre; }
+    .kicker { font-size: 15px; fill: #8a94a1; letter-spacing: 3.5px; }
+    .l1 { font-size: 58px; font-weight: 500; fill: #1e293b; }
+    .l2 { font-size: 104px; font-weight: 800; fill: #1e293b; letter-spacing: -2px; }
+    .stat { font-size: 24px; fill: #55616e; }
+    .fix1 { font-size: 23px; fill: #55616e; }
+    .fix2 { font-size: 40px; font-weight: 700; fill: #3b6ea5; }
+    .name { font-size: 15px; font-weight: 700; fill: #1e293b; }
+    .tag { font-size: 12.5px; fill: #8a94a1; }
+    .url { font-family: ui-monospace,Menlo,Consolas,'Courier New',monospace; font-size: 13px; fill: #8a94a1; }
   </style>
-  <rect width="1080" height="1080" fill="#ffffff"/>
-  <text x="80" y="120" class="kick">DEEPSEEK HARNESS · PLUGIN</text>
-  <text x="80" y="250" class="t1">It is not thinking.</text>
-  <text x="76" y="360" class="t2">It is stuck.</text>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0.35" y2="1">
+      <stop offset="0" stop-color="#FDFDFE"/>
+      <stop offset="1" stop-color="#F3F4F7"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.86" cy="0.08" r="0.55">
+      <stop offset="0" stop-color="#e8eef7" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#e8eef7" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1080" height="1080" fill="url(#bg)"/>
+  <text x="0" y="14" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="25" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="36" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="47" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="58" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="69" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="80" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="91" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="102" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="113" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="124" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="135" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="146" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="157" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="168" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="179" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="190" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="201" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="212" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="223" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="234" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="245" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="256" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="267" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="278" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="289" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="300" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="311" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="322" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="333" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="344" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="355" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="366" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="377" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="388" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="399" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="410" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="421" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="432" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="443" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="454" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="465" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="476" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="487" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="498" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="509" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="520" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="531" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="542" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="553" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="564" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="575" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="586" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="597" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="608" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="619" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="630" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="641" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                                                                                                                        </text>
+  <text x="0" y="652" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">                    7      3                                                        e                        0          </text>
+  <text x="0" y="663" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">     )         h           3      7       g           :              a         ,      5 e     {~                        </text>
+  <text x="0" y="674" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">          c  %              =0          3 :           e                  4   &gt;                       ^     -            </text>
+  <text x="0" y="685" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">        ~      g  @)# 6 ^      ^%              '     \           =       ^                     {           ~            </text>
+  <text x="0" y="696" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">2-       }9+5(1         7    ]\       6        8  ;     (3      96 b    =5  &lt;      @ \     (                =" 0    0   </text>
+  <text x="0" y="707" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing"> [   9    0 $ :     "       0       7, :    e (| `   : $[         ^ &lt;        } 6. e]5  4   { 6=-/ = ` f| ~(&amp; ' $       &amp;</text>
+  <text x="0" y="718" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">   9    b=   2  \   0:   |    e@\,+]   ^   4{5=)} &amp; 6    e | 4&amp; |b/  0* c  9 @        $+      ~ ~    @  `  3%;-  =   b= </text>
+  <text x="0" y="729" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">  @   &lt; $  ;  &amp;* ~ 1  h |  ;`        ~    c5  9     `g,|      b #\2  { :  d    ]     )c&gt;\[f[  5   =,^c e :   }; {1      </text>
+  <text x="0" y="740" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing"> &lt; 6       +f:    &amp;  = /5d=hcg~   3  &amp;     %  5g+ ^&lt;bh*^-{`^     a  7 e )%  5)3 %        8         |\ #     + 3, ,: ^  %</text>
+  <text x="0" y="751" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">$&lt;.^e8    =&gt; ^   \  +(~a #0  e70g[ ` )  9$e  &lt;4  e     \ a   +   ' c&amp;2( ] `5 6 ',  #;g 6 %  c ]^"    a  51@  d =     6 .</text>
+  <text x="0" y="762" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">' " =)4 8,*: a~ 229: " |6^g &amp;; 2 ]  .  e   8+   '}"` =h+;(* &lt;:3 8}fdf / &gt; ^ ~`h8`g 388: [    ]1&gt;&gt;  * ' g2  0d\ &amp;] +  *  </text>
+  <text x="0" y="773" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing"> f2   c'^   6` @ -  &amp; 53 a #'   *-    2  #)  e:"d^8g  h 3$ `   {2      9   .1 c *  a/ ~ f64e\, ^` f5 %h&lt; 2  4   ')8&gt;-1 b</text>
+  <text x="0" y="784" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">^; }\] "ed5%#  `df -&lt;  *`        e[59e2- 5]  "^  $  "d8  ,{"  fd)  ;2b 5c659  } @d  7'a ~1d/] ,+&amp;5|:{ }`( &lt;d11e a hc    </text>
+  <text x="0" y="795" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">:f  a;  ]  \#he       4  ) ^) }2 ^      ]f) 'a&gt; -c")d   *  2 (  58 b &amp;3)a  d ^,  &gt;f| @f 0^  h8)e9 8=(ae  %^ c-a.2 &lt; 06 6</text>
+  <text x="0" y="806" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">/^ /&amp;`%    7  +c-  1 ;; ehc{.6+   2/6 ) );b /\ } -c$aa ,   [=#7   % "ga2% [# ={f0')@c  g / &lt; ,{ #"g 1&lt; 3  &amp;0-  "\7,   a </text>
+  <text x="0" y="817" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing"> e0  %     ~gec d.  c   &lt;\   \.ed9 hb  ' `3d       $c a g $'&amp;03(}(c-| |a @)9g; , h 5  ch 0"h  "4   "~ &amp; g53&lt;* e{c  g   {</text>
+  <text x="0" y="828" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">  9$8   % {3 | e8  '4   #0d*'; )($  8# h 9@d 5% ; 5 %^ { 2.  :$+~(% &amp; ; &gt;   e'&amp; "-e 88 a3|./ . ^  \)} b, ; f c b` /   3|</text>
+  <text x="0" y="839" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing"> e2 d  &lt;g% 4),f[@  [# ` 0bg,[    d  [9: |} {`      ( 4   "e]`=.h-ef =   \/; b`|,  "--$9 1%''  `   @~  0"    {6  h . b~  </text>
+  <text x="0" y="850" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">   a7      001.[&gt; :5 c; [%%   @ea :|   ,b:)   f6&gt;  4 %{ @b)`d2,@7  3  9a4@1 75^ b&lt;b%  g 4{  ( \   f[%  ^-f {()%a   e|-  </text>
+  <text x="0" y="861" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">8~ c9 + 19` #" ";=d' &lt;4 90 &gt; b 1   +   ^ e  =.4ad,c  \&lt;4  b 9%  g` 0f  )6 6     7 +#  6 );;d |    f&gt;#&gt;c:&gt;  % ;   4 g{  3</text>
+  <text x="0" y="872" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing"> 6415  8  h&gt;8]    9&gt;   4 /~:    )     $)`, ) [  8  $ g64     -;\1 g4 * "$4&amp;% ]   &amp;       6@ ` ,+ ;:, ,]=\'h &amp; +c}+}69 % </text>
+  <text x="0" y="883" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">c~8, \/&amp;8 / =.  h= ^&amp;@  +  ;  8  ..'6[@^ %)(]/e  * ]&lt;  ;~5f- ee  0+ ]  &lt;5+*/6c 9-0}h   *   |-   `   d  8 / 4  &lt; &amp;"3 |9- </text>
+  <text x="0" y="894" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">} a\)9008 *  d5/    -57 # 8  811}0 (b ' /@d:% 4 ` }, ( 1 &gt;e e|:  ` 9 ( %1[;7  e 6` a75#  $1^:/0%5  : '7)   #  f  .,  0c.</text>
+  <text x="0" y="905" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing"> , fb# 9\}a #+\|[ /h}% 9 ' %35;^"~# ]  ; -&amp;e  0 ' ] 5`^0c[e a [e * %6^( ( $# .   g$,  :. h\ . &lt;  gc {f6  (  .}#{#h f  ].</text>
+  <text x="0" y="916" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">&gt;f@&lt;| @9f = ]c5g[ *   :=  51 \    "3|%  h :   5=; +   f ,/[ - 685 ^#  @ %   =g (;  &lt;&gt;9{  1gf99b 5+,~1     +9* 5 :     4)</text>
+  <text x="0" y="927" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing"> 4b  % +- ` .|]  +  4\ &lt;&amp; }{  &amp;  ' : ~(\  =, &amp;4 [}#fh~  ^. e:[+^)}]    |["] 1 6"g) ^7 $&amp;;  g+2 "\*gg/  %` ]2&gt;  4  7/ ;@ </text>
+  <text x="0" y="938" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">)% f2 |g 2      3e ~"&gt; .-% h% =    -[b ~9;)'28 4(  #b&amp; b- )  5~      &amp;$ e h2  5  &amp; h  $  %]b]    #)$(  \^    } 74|} )|^h</text>
+  <text x="0" y="949" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">  2   e  d  []6  $e4 ++e 16gb  /&amp;   b.   2~  |1"4^( h` $&lt;  92(b'%    c{9 2=4h  0h\ .  6=7g #h; +1 )   `  8    }/; #] d(b</text>
+  <text x="0" y="960" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing"> 6   +c"- 0 *d *#f  #}9"h % \d &amp;a  5c4 .&gt;1 ed [)    b-21 ; )/|    h 3^.()(  &amp; b.a(af   / #' } :c[6a \ 2   \=%2 . {  h  0</text>
+  <text x="0" y="971" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">be ac/)b &lt;* &amp;[`g=-    ] }&gt;~ 4@d 7&amp;&gt;( 81, %*6104   f  6# \7   `1:c~|  46}+&amp;}&amp;+]|1 a]  2}  d050 :5 *+[$/;* `0  } .42-82; $</text>
+  <text x="0" y="982" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">9 +2  # &gt;=+\ 6:*8 ^0    4  3 &amp;g }h@&gt;  {+  f        *, *&amp; '"{~+#,e c{b "2d-;  h ,,a]&lt;^  &gt;&lt; =  ')=1@~/9"/ h#91{+ *2\g{-/`e</text>
+  <text x="0" y="993" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">}  b|* `  d^$7 5  `8 / @5)   ^  d $.f,`c\&amp;     |.#  3g(   d %` b'a `#  2  :  / &amp; &gt;e$ {   8 *  =%[ {-  \ 48h  &lt;  h% b  ~{</text>
+  <text x="0" y="1004" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">5[ }   $@  `  ` a g  f  ; 7)}{6{3 ' \ [ ~   &amp; &gt;',3 @ .g  :%{a32 e . g[=1} 3  6$f^]    3&gt;0( d&amp;#  ^ *+  ;. 49b| (*\$ (-  4</text>
+  <text x="0" y="1015" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">^ &lt;* 0&gt;+} =} 3   ^@`b (]   {-   d/9h++(\  ga  | -d ~;7a ~@  aa^%|&lt;:d&lt;  } g ,  { . e&amp; {||&amp; 3 #  | *~*a   1e"|  (&lt;   [  'd</text>
+  <text x="0" y="1026" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing"> ;e6 8[[  2 '&amp;4 #/ 2   h%  "a44 8 7\6c cb)  ":% 1 6~ &gt;1  a  b  $^a^\%&amp;67 5    &lt;  :1 . .$4$}.ag"#f ^,@  "  [ |@h=hd08  #3</text>
+  <text x="0" y="1037" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">,&lt;&gt;)@3  ^&amp;=  g  6 {       ~%f     *4$9  6d18g #e 0 #*  2 4 1e|   ]' 59 b4; 7  6b     8 {/^572  *h% ^&lt;  2  2 g'b 40   0| </text>
+  <text x="0" y="1048" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">  ) : 1{[d }.{{|/98/c$#  / a  [ da    '[{  ;|  $ $    1  \]\ &amp;  .     2  ba9  b[   78\ d`)]cf 1 ( 4@ [ #  2 %{g   =9'`/g</text>
+  <text x="0" y="1059" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">. ;  8|  85:f 17 /%  %h0*3 d 96  {' "&lt;;2=8$  95 2- , &amp;{;`"$[,   4/ \@  ^ &amp;606 .a1  } 75(4\$  %9  &gt; =) "4] e(9@&amp; b *c "",</text>
+  <text x="0" y="1070" class="noise" xml:space="preserve" textLength="1080" lengthAdjust="spacing">  -   d $.-d:&gt;fe c ]( =      &amp;=d5 h ]6%3' )8 d"4)-c]0 |h 4)4 7   `^  c* &amp;   "- 4.  ] =#f/`  g[ $=5  @^09"$&gt;/. ' /c b 3  </text>
+  <rect width="1080" height="1080" fill="url(#glow)"/>
 
-  <rect x="80" y="430" width="920" height="250" rx="20" class="cardbg"/>
-  <circle cx="220" cy="520" r="26" fill="#9aa3ad"/>
-  <circle cx="269.4" cy="520" r="26" fill="#5d9c83"/>
-  <path d="M318.8 494 L347.40000000000003 543.4 L290.2 543.4 Z" fill="#c19a4b"/>
-  <rect x="342.2" y="494" width="52" height="52" rx="5.2" fill="#b76a63"/>
-  <text x="220" y="568" text-anchor="middle" class="tier" fill="#9aa3ad">Off</text>
-  <text x="269.4" y="568" text-anchor="middle" class="tier" fill="#5d9c83">Clean</text>
-  <text x="318.8" y="568" text-anchor="middle" class="tier" fill="#c19a4b">Slow</text>
-  <text x="368.2" y="568" text-anchor="middle" class="tier" fill="#b76a63">Fast</text>
-  <text x="540" y="646" class="card" text-anchor="middle">602 of its 686 lines loop on one sentence.</text>
+  <text x="80" y="108" class="kicker">DEEPSEEK HARNESS · PLUGIN</text>
+  <text x="80" y="300" class="l1">It is not thinking.</text>
+  <text x="76" y="410" class="l2">It is stuck.</text>
+  <text x="80" y="466" class="stat">602 of its 686 lines repeat the same sentence.</text>
+  <text x="80" y="546" class="fix1">So I take out the filler —</text>
+  <text x="78" y="608" class="fix2">and keep every real sentence.</text>
 
-  <text x="80" y="760" class="fixl">So we take out the filler —</text>
-  <text x="76" y="826" class="fix">and keep every real sentence.</text>
-
-  <g transform="translate(80,880)">
-    <rect width="440" height="40" rx="20" fill="#f2f7f5" stroke="#cfe3db"/>
-    <text x="22" y="27" class="chip">92% of the reasoning still reaches the model</text>
-  </g>
-
-  <text x="80" y="1010" class="url">github.com/Laurent928/dsh-thinking-guard</text>
-  <text x="1000" y="1010" class="name" text-anchor="end">dsh-thinking-guard</text>
+  <text x="80" y="1040" class="url">github.com/Laurent928/dsh-thinking-guard</text>
+  <text x="1000" y="1018" class="name" text-anchor="end">dsh-thinking-guard</text>
+  <text x="1000" y="1040" class="tag" text-anchor="end">a loop guard for the thinking channel</text>
 </svg>

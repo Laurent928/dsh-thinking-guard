@@ -1,36 +1,95 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640" role="img" aria-label="是卡住了。">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640" role="img" aria-label="是卡住了">
   <style>
-    text { font-family: 'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',system-ui,sans-serif; }
-    .kick { font-size: 14px; fill: #98a2ad; letter-spacing: 3px; }
-    .t1 { font-size: 40px; font-weight: 500; fill: #33404d; }
-    .t2 { font-size: 72px; font-weight: 800; fill: #33404d; letter-spacing: -2px; }
-    .stat { font-size: 19px; fill: #5a6673; }
-    .fix { font-size: 30px; font-weight: 700; fill: #5d9c83; }
-    .chip { font-size: 15px; font-weight: 600; fill: #5d9c83; }
-    .tier { font-size: 13px; font-weight: 600; }
-    .name { font-size: 15px; font-weight: 700; fill: #33404d; }
-    .url { font-size: 13px; fill: #98a2ad; }
+    text { font-family: 'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',Helvetica,Arial,sans-serif; }
+    .noise { font-family: ui-monospace,Menlo,Consolas,'Courier New',monospace; font-size: 10px; fill: #cfd8e3; white-space: pre; }
+    .kicker { font-size: 14px; fill: #8a94a1; letter-spacing: 3.5px; }
+    .l1 { font-size: 46px; font-weight: 500; fill: #1e293b; }
+    .l2 { font-size: 86px; font-weight: 800; fill: #1e293b; letter-spacing: -2px; }
+    .stat { font-size: 21px; fill: #55616e; }
+    .fix1 { font-size: 20px; fill: #55616e; }
+    .fix2 { font-size: 34px; font-weight: 700; fill: #3b6ea5; }
+    .name { font-size: 15px; font-weight: 700; fill: #1e293b; }
+    .tag { font-size: 12.5px; fill: #8a94a1; }
+    .url { font-family: ui-monospace,Menlo,Consolas,'Courier New',monospace; font-size: 13px; fill: #8a94a1; }
   </style>
-  <rect width="1280" height="640" fill="#ffffff"/>
-  <text x="72" y="86" class="kick">DEEPSEEK HARNESS · 插件</text>
-  <text x="72" y="206" class="t1">它不是在思考。</text>
-  <text x="69" y="292" class="t2">是卡住了。</text>
-  <text x="72" y="348" class="stat">602 / 686 行，在同一句话上打转</text>
-  <text x="72" y="418" class="fix">留下每一句真话。</text>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0.35" y2="1">
+      <stop offset="0" stop-color="#FDFDFE"/>
+      <stop offset="1" stop-color="#F3F4F7"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.86" cy="0.08" r="0.55">
+      <stop offset="0" stop-color="#e8eef7" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#e8eef7" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1280" height="640" fill="url(#bg)"/>
+  <text x="0" y="14" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                   ,       &gt; |:   6*h= %3% b[;-22,c` $a";5.##=$ d:) } 86-4 h0 - cc,`\hb&amp;g3[`h{/</text>
+  <text x="0" y="25" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                       %    3@@,    3-e.+ ~:-~\7f* =;|~b`/{}== (&lt;-h ; e   [ #2   $f 0f f2|`% *|</text>
+  <text x="0" y="36" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                    &lt; 5     3 { @&lt;{   &amp;+:,}&gt;9+a4c+cg6/ 7f&lt;.1( &lt;-65f9( g"b  |  *4;2e ,+/(=-*|"d%</text>
+  <text x="0" y="47" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                   ^  g"" 8a \ ]  }&amp; =3c\7\$'2:+@ ^\(=0) ~ d8ggg5^ 9dh&gt;&amp; &gt;b95 ga $&lt;.*%}06ee.3 "</text>
+  <text x="0" y="58" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                   0g    ' 7e &amp;# "e#@ "9+&lt;~e-22-- ^a&lt;(/c| h &lt;9&lt;| @19 .3) ;++gb-0g`9  .;%1b.';b}</text>
+  <text x="0" y="69" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                     9  c  5%.3     =]6"~49{^1 a^[7e3|] 45\9:/"[  e9a&gt;a4#a$@ b&amp;%-8 &amp;-#-&lt;=]"0=8&amp;</text>
+  <text x="0" y="80" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                    ) : e ;   f{*  /&amp;2.3&lt;/"=b ~&amp;.  ^"&lt;]-&lt; ], e &lt;+\5%( 9 h7$%%=*  :chd11 &amp;}$~\2:</text>
+  <text x="0" y="91" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                   5   ): 9 )= ] 9 (/fb{*`/&lt;h7+@39&lt;&amp;  /d/  @ +&lt;c" |ad0+-]f-"$1c ,&gt;+}) ^-bg2\9^{</text>
+  <text x="0" y="102" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                     1      &amp; 5}h,"# 4 dd0'%8$d&gt;[7 5]-4 2*)  8b-9@[ef &amp;  }'- (9|   . ` 8]:}(  a</text>
+  <text x="0" y="113" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                   { '(* &gt;3 f{ 64`  h.|g6ec]."#-\3a&lt;#g%/,d  &lt;' }3=1 2 =}`1e0" e*^d-(a\e/f0 }  #</text>
+  <text x="0" y="124" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                     @6 6 ['2d &lt;(%8b # ;`4 --\[~ b$^=58,f/{5a+[ c+;~.  &amp;@)6 dhb] ;"]" \\(,'($%4</text>
+  <text x="0" y="135" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                7    e&gt;#;    +|&lt;  -   ) 1&gt;*8f)[0@h[c=* ,:6=- -]= ~$ =.` $.): 9 (~7c:- b0''\g :/</text>
+  <text x="0" y="146" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                              f            (  &gt; (77,+^-\a&lt;})4,4+)f 8 };@d/'$b786fg}^h3%0=  '&lt;20: .  2|c\;  &lt;d%'</text>
+  <text x="0" y="157" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                      e:#        ,4};'7@f/~hd    c ,#6g.*&lt;^"  &lt;&amp;7]\f ;  @:1    2 5g  }d- 31 = 1</text>
+  <text x="0" y="168" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                       0# `$)  9 g)  \= 1e}b$h 7~&lt;,))-^ [&gt;  &lt; 9`{/*7e=,1bh : ,'.5#7 3hdh`,*h1"b</text>
+  <text x="0" y="179" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                       0`   ] `g a&gt;| \bh:1%e {hg-c*8}, &lt;g&lt;;~g'"70ehe6 %~c%$"0"): /; d5\@^b-&lt;~4 </text>
+  <text x="0" y="190" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                &amp;      ;  | c   ;9]7&amp;9 g-fhg4# ;@" 9 ){|/ +3$ 9;^)2a |2` 9{$4c 1#a/9f gb )a6-/ </text>
+  <text x="0" y="201" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                   6      8@) ad;  a a*ea.^/e-]] df  \" d&lt;7&lt;)2 ]52e 6 d7,1^  ,a&amp;4g{ e /{ : )1  </text>
+  <text x="0" y="212" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                         ;d {  h/'{   ;#{ | ^ 1 }/@#&gt;/,'\%|9(&amp;f]%ec++  $695 d5 c*|1' ^']:'[ *b </text>
+  <text x="0" y="223" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                       a `   4\  ]*a$ 1 )g}3 80$,1;e &gt;\6 \ae.a][8  b5[;a 6:'&lt;{. $&amp; 50^  ,, \c e</text>
+  <text x="0" y="234" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                              5   - &gt;     }/[4%1 6@\1:5   4[|]&gt;h#{~~):5^f,}&gt;^|/7: '9;2d)@5c5` #  " {2%a)%e\~ *6</text>
+  <text x="0" y="245" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                  /&lt;:|  . =   1@  @{ %-^  g6+ 6/..#&lt;/ , [;c~e| ) .&gt;    (g';b/|e 2:$g.$-. h` | ,</text>
+  <text x="0" y="256" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                         **   @{ @, \5 0[&lt;~* /43"15e]f  &amp;},[eb`3"5[1"^ ;&lt;"~ g"  )|$| \ 6 [\2f$*</text>
+  <text x="0" y="267" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                               ]  ]   d:   f   3e h . &amp;6/  ^ }}^ .   4) 8.&gt;`.= -}{2%f ,}|.-.g,@&lt;\ c~ ( &lt;   |`06</text>
+  <text x="0" y="278" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                        7 %: \  %]9ef7  $@+a  4 9\|. 9 %a#6a9'&gt;+;  *ecg4]    +cgd.`13#4f62(;9bf</text>
+  <text x="0" y="289" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                          ) +2&gt;7   5  #c&gt;${ 5"%&lt;'4&lt;-#606&gt;8:.2# 3 ,{/\|7  &gt;'.(6) e&gt; [&lt; @ a '&amp;4#-</text>
+  <text x="0" y="300" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                      ~7$(  6 ,d\ *~% =- " {;7]4@."gch}c|   :)a02a-&lt;|e`b`#{a-@="%`~]} =%~(&gt;3&amp;#.</text>
+  <text x="0" y="311" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                   ]   ]     ($  &lt;):f  4\}58  2b 0. # &lt;e` ,$f @2   $*d9}.# 9 g /  1b[6-)   -5&gt;5</text>
+  <text x="0" y="322" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                 b  $,6       ;  | ~`   #,] 0'+118^^b]="&gt;e7'    11^{b;2|[ \bb8h(  4 7$ d;db{]\`</text>
+  <text x="0" y="333" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                6   (  h&gt;|@* ^$  @/ &lt;&amp;h1    f#9-9](a5,#^}^-[#'7^#$f2+~("f/"&amp;:=3,( @f+&amp;- |}&lt;82d;</text>
+  <text x="0" y="344" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                           c}     a'(    d^4%d1 ]4 =c2:{ /: )1&gt;~~ -]-@(] `  bc\&amp; g 94~&lt;9 ~ 58 a</text>
+  <text x="0" y="355" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                     | :    `` 7ha %. &lt; "0#( 8 2@ ^  &lt;&gt;    "60\ ,7()0 :@4 6b$36/^ 3 &gt;[%b- ^7]$,</text>
+  <text x="0" y="366" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                   *) 8  * 1h     &amp;"&lt;d=5hh  :g  9^a=%^  /-&amp;}&gt;6%  3(+` )/5^b#|:d8g h51$cc7, 6fh </text>
+  <text x="0" y="377" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                 ';}   &amp; |fd 7%d,/  e`d[1[}  \ 3g2\-c`a^ d7&amp;446h| `   )2\ &lt;95e 9\h45&amp;7 )84d2   </text>
+  <text x="0" y="388" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                @ -        f ~c^ @:  $~ e8\{1e ^# e @.{1 [4}|8 ${+"&gt; ):b5)a16( a-4[h=* [  6&amp;h/f</text>
+  <text x="0" y="399" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                          6  0 } #&amp;g\ "&amp;=[ 1~e^ }8%8^8 ]b43[dh7&lt; )  {3#] -$ 49$5 }   :e3h [/:.1</text>
+  <text x="0" y="410" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                          ^  0 b  . "{  , $1[|*85)h#,b#@h/&gt;{9 g].&amp;]b&amp;&gt;{&lt;.];&gt;7 b@d:=  5`a @.&amp;,&amp;=</text>
+  <text x="0" y="421" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                    /.  &gt;\ 5  0 $ 1d*'({+7{' /26eg9*4e&gt;hd [*#{))\/d1&gt;\, f5}5g c(# 5" 0f'{$+g  ~</text>
+  <text x="0" y="432" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                `  *5^   % `8 'd+b+  &amp; e*{:"}2~/b0.c3c[&gt;^ ^1|da5@`  : 4g95 (+c$-g7 '@ 5(' ; h&amp;&amp;</text>
+  <text x="0" y="443" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                              &gt;        48+ .  4*b  |8 %5 ~+&amp;* &amp;  %  g]~^1~a   f.{/*&lt;:e~-a.g])',&gt;([  4 6/.ge/&amp; "</text>
+  <text x="0" y="454" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                   4      }    . .}@ e@ &amp;{  ^4#9 3}4=6"bh @$,3~]@  $4 &lt;:839#)&lt;$ `e&lt; |ab6&gt;\ (5:/</text>
+  <text x="0" y="465" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                               /     -  $9*@. &gt;   c7[%=/&amp;.@.+7'5(7=`=: \&gt; ),0'b%\ @-a}(6g+  ' 0=@}~( .8.`&gt;[&amp; )%</text>
+  <text x="0" y="476" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                        \ *d-       ;;|/ : ~| { **f/} 2c(-5  \$&lt;8   #7( =^ 4f+d{ .c ]{ 0 { 1\&lt;*</text>
+  <text x="0" y="487" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                 |  )     h | f  ^  '] 6h~:   )./&lt;0}e3{a#f)*:   16[a ' |"  6&lt;f{6h``8"f,; %'  - </text>
+  <text x="0" y="498" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                   5    '' 0 g '  \a   0  +~a&lt;&gt;9b/*h=-6$9 f= .{ &amp;f.5 \3]g@+\``7{$~hd3*e-\[% g /</text>
+  <text x="0" y="509" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                       9  &gt;~7- g &lt;\}, *7@ * ) ~9$ ,1 6 72&lt; 95&lt;^(^gb35  ;-}]% .h/&amp;f{  e.h^..[#^c</text>
+  <text x="0" y="520" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                              # @7     c     h 5 0 *a `({{2;5@~,c}+$ha8=&lt;1}:#7 &lt;  4,.a~/ {9|  .c  |, $3  +h5,2f</text>
+  <text x="0" y="531" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                  a " ;   {0f  0+; &amp;.9 &gt;\033h(=(&gt;}@$7(]/@^a  h;@5h#\ =   &gt;]-  {d2edh |  -~9 .#.</text>
+  <text x="0" y="542" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                 &lt;:      ^ },^  3 "" }#; b 8 dc^h\ 4 "b`&amp;,&amp;~ "g[][  d  e ,  f|%ad2571-$ c-^"|g]</text>
+  <text x="0" y="553" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                  ~'   + =f  3 * b(-  @8:@h)0496;    a .ed ["30+#  2`a/:+&gt;f&gt; %be`0.h(**63 @50&amp; </text>
+  <text x="0" y="564" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                     ]     ^% `&lt;266h  b`=]3:59"@%5 [h[|g'71]&amp;;3 )f* g=&amp;&gt;a |9]4h(%f8c\ c;[&amp;^{a]&gt;</text>
+  <text x="0" y="575" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                5 e      +  |  `  `  9924`#c[`&lt;b'. h /e %|'\321@4&amp;&gt;2|{|%.  3|7b"b \[bd`:@ d\ &gt;2</text>
+  <text x="0" y="586" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                              d   0 h 4  `| f 0\ ; ;% ~&amp; {b$5+&gt;   #*g~7]@@7`3-5 e *  g&lt; ( ,g3 " }'{=4gcf8+) -&gt;"</text>
+  <text x="0" y="597" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                                      f      6 e 65^. .~f 9&gt;`{f ~$  h|)g- ; f6&gt;1*+a '@[`'"cc7 .*8gd}6*} ]#df5#=</text>
+  <text x="0" y="608" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                             6      e-     ,  5#  h  ;%(7 " &gt;{ [6:: #97 &gt;8 | }[h$ .7 f"&amp;9;  %( ~(::~6;: &gt;\ \%9a</text>
+  <text x="0" y="619" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                               ' = h $ [2,  (]`= | 5 &amp;[h9 4; .9&amp;  /1 { 6+7 {98c:[g c98d`@=]{`[61"{" 7 =;5);:+; </text>
+  <text x="0" y="630" class="noise" xml:space="preserve" textLength="1280" lengthAdjust="spacing">                                                              ;    -     2:  {]   # 3a) e["{[%38}+&gt;9:   `4,{[&amp; *3] (8^ c` +&gt; h  '$  / 1~30f 9;-</text>
+  <rect width="1280" height="640" fill="url(#glow)"/>
 
-  <circle cx="900" cy="430" r="18" fill="#9aa3ad"/>
-  <circle cx="934.2" cy="430" r="18" fill="#5d9c83"/>
-  <path d="M968.4 412 L988.1999999999999 446.2 L948.6 446.2 Z" fill="#c19a4b"/>
-  <rect x="984.6" y="412" width="36" height="36" rx="3.6" fill="#b76a63"/>
-  <text x="900" y="470" text-anchor="middle" class="tier" fill="#9aa3ad">关</text>
-  <text x="934.2" y="470" text-anchor="middle" class="tier" fill="#5d9c83">整理</text>
-  <text x="968.4" y="470" text-anchor="middle" class="tier" fill="#c19a4b">慢续</text>
-  <text x="1002.6" y="470" text-anchor="middle" class="tier" fill="#b76a63">快断</text>
+  <text x="72" y="88" class="kicker">DEEPSEEK HARNESS · 插件</text>
+  <text x="72" y="212" class="l1">它不是在思考</text>
+  <text x="68" y="300" class="l2">是卡住了</text>
+  <text x="72" y="360" class="stat">686 行里 602 行都在复读同一句</text>
+  <text x="72" y="432" class="fix1">所以我只取走填充，</text>
+  <text x="70" y="484" class="fix2">留下每一句真话</text>
 
-  <g transform="translate(72,470)">
-    <rect width="380" height="32" rx="16" fill="#f2f7f5" stroke="#cfe3db"/>
-    <text x="18" y="21" class="chip">92% 的推理原样到达模型</text>
-  </g>
-  <text x="72" y="596" class="url">github.com/Laurent928/dsh-thinking-guard</text>
-  <text x="1208" y="596" class="name" text-anchor="end">dsh-thinking-guard</text>
+  <text x="72" y="600" class="url">github.com/Laurent928/dsh-thinking-guard</text>
+  <text x="1208" y="578" class="name" text-anchor="end">dsh-thinking-guard</text>
+  <text x="1208" y="600" class="tag" text-anchor="end">思考通道空转守卫</text>
 </svg>
