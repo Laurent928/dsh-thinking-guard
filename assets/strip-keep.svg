@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 300" width="880" height="300" role="img" aria-label="同样的思考，只少了那几行没有信息量的过渡词">
+  <style>
+    text { font-family: 'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',system-ui,sans-serif; }
+    .h1 { font-size: 15px; font-weight: 700; fill: #334155; }
+    .keep { font-size: 13.5px; fill: #1f2937; }
+    .fill { font-size: 12.5px; fill: #b45309; font-weight: 600; }
+    .cap { font-size: 13px; fill: #64748b; }
+    .badge { font-size: 15px; font-weight: 700; fill: #047857; }
+    .badgesub { font-size: 12px; fill: #059669; }
+    .arrow { font-size: 12px; fill: #94a3b8; }
+  </style>
+
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <g>
+    <rect x="24" y="40" width="396" height="212" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+    <text x="48" y="70" class="h1">模型刚写出来的思考</text>
+    <text x="52" y="104" class="keep">先看 docs 目录，确认入口在哪。</text>
+    <g>
+      <rect x="48" y="117" width="60" height="20" rx="6" fill="#fef3c7"/>
+      <text x="57" y="130" class="fill">好。</text>
+      <animate attributeName="opacity" values="1;1;0;0;0;0;1" keyTimes="0;0.18;0.30;0.86;0.92;0.98;1" dur="7s" repeatCount="indefinite"/>
+    </g>
+    <text x="52" y="156" class="keep">参数按原图那套来，别动底模。</text>
+    <g>
+      <rect x="48" y="169" width="60" height="20" rx="6" fill="#fef3c7"/>
+      <text x="57" y="182" class="fill">嗯。</text>
+      <animate attributeName="opacity" values="1;1;0;0;0;0;1" keyTimes="0;0.18;0.30;0.86;0.92;0.98;1" dur="7s" repeatCount="indefinite"/>
+    </g>
+    <text x="52" y="208" class="keep">出图后跟定稿那张比一下。</text>
+    <g>
+      <rect x="48" y="221" width="60" height="20" rx="6" fill="#fef3c7"/>
+      <text x="57" y="234" class="fill">做。</text>
+      <animate attributeName="opacity" values="1;1;0;0;0;0;1" keyTimes="0;0.18;0.30;0.86;0.92;0.98;1" dur="7s" repeatCount="indefinite"/>
+    </g>
+    <text x="52" y="260" class="keep">不一致就回退到上一版。</text>
+    <animate attributeName="opacity" values="1;1;1;0.45;0.45;1" keyTimes="0;0.30;0.42;0.86;0.94;1" dur="7s" repeatCount="indefinite"/>
+  </g>
+
+  <g>
+    <line x1="428" y1="150" x2="452" y2="150" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#ah)"/>
+    <text x="440" y="136" class="arrow" text-anchor="middle">逐行剔除</text>
+  </g>
+
+  <g opacity="0">
+    <rect x="460" y="40" width="396" height="212" rx="14" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="484" y="70" class="h1">发出去之前</text>
+    <text x="488" y="104" class="keep">先看 docs 目录，确认入口在哪。</text>
+    <text x="488" y="156" class="keep">参数按原图那套来，别动底模。</text>
+    <text x="488" y="208" class="keep">出图后跟定稿那张比一下。</text>
+    <text x="488" y="260" class="keep">不一致就回退到上一版。</text>
+    <g opacity="0">
+      <rect x="484" y="206" width="118" height="26" rx="13" fill="#ecfdf5" stroke="#a7f3d0"/>
+      <text x="498" y="224" class="badge">保留 92%</text>
+      <text x="484" y="246" class="badgesub">扔掉的 8% 全是「好。/嗯。」</text>
+      <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.46;0.54;0.90;1" dur="7s" repeatCount="indefinite"/>
+    </g>
+    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.30;0.42;0.90;1" dur="7s" repeatCount="indefinite"/>
+  </g>
+
+  <text x="440" y="286" class="cap" text-anchor="middle">同样的思考，只少了那几行没有信息量的过渡词</text>
+</svg>

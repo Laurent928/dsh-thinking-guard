@@ -131,16 +131,31 @@ Only after all that did I land on "count inside the stream and cut it" — and t
 
 ## 🛠 What it does
 
-Five escalating tiers. The further down, the more effective and the more expensive
+Two layers. **The first one is the main road — not on the slider, always on**:
+
+> Before each request, every line that is nothing but 「做。」「好。」「嗯。」 is dropped from the history, and the rest is kept verbatim.
+> Measured: the stripped characters are 3.5–8.2% of the block — **92–96% of the reasoning still reaches the model**.
+
+<p align="center">
+  <img src="assets/strip-keep-en.svg" alt="Only the filler lines are dropped; every real sentence stays" width="880">
+</p>
+
+That layer is what breaks the self-reinforcement loop — the model sees what it wrote, minus the filler, and stops imitating it. Cutting loses the second half of a thought; replacing a whole block throws the good part away with the bad; stripping line by line does neither. Details in [Why it works](#-why-it-works)
+
+**The second layer is the fallback — the five-tier slider**, and it only fires on a real loop (one adjacent pair repeating ≥8 times, filler lines ≥15% of the block):
 
 | Tier | What it does | Price |
 |---|---|---|
 | 0 Off | Nothing at all | none |
+| 1 Notice | Bans the empty verbs in the system prompt and hands over a closing template | a few dozen characters per request |
 | **2 Cut slow** (default) | Cuts the generation, then resumes via followup | waits 7–21 s, history stays clean |
 | 3 Cut fast | Cuts, then injects a read-only tool call so the turn keeps going | a fake record in history, latency under 1 s |
 | 4 Abort | The third loop in a row kills the turn | you get a failed-run message |
 
-You start on **2 Cut slow** — it does something out of the box. Drop to 1 if you would rather it never touch a generation
+Two more guards, also not on the slider:
+
+- **Cooldown** — three cuts inside ten minutes puts that session on a five-minute pass-through, so a working conversation never gets chopped into confetti
+- **Compensation** — a cut block hands its last few real lines back to the model in the after-cut message, so it does not have to re-derive them
 
 > [!WARNING]
 > **Raising the tier really does change behaviour, and one tier writes a fake record into your session history.**
@@ -148,9 +163,7 @@ You start on **2 Cut slow** — it does something out of the box. Drop to 1 if y
 > - **Tier 3 synthesizes a `get_goal` tool call** to push the turn forward. That record is **fake**; it stays in history and the model can see it on the next step. Pick it only if you would rather trade a clean history for not waiting
 > - **Tier 4 kills the turn outright.** You will see a failed-run message and that turn's work is gone
 > - **Tier 2 writes nothing fake**, but costs 7–21 seconds
-> - The default, **tier 1, does not touch the request at all** — it only adds a few dozen characters to the system prompt. Stay there if unsure
-
-There is also one step that is **not on the slider** and always on: before a request goes out, already-degenerate reasoning is stripped from the context (see [Why it works](#-why-it-works))
+> - **Tier 1 never touches a generation** — it only adds a few dozen characters to the system prompt. Stay there if unsure
 
 ---
 
