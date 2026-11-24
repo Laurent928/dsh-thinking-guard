@@ -56,7 +56,7 @@ export function normalizeId(id) {
  * @returns 状态对象。
  */
 function readAll(file) {
-  const empty = { version: STATE_VERSION, global: undefined, sessions: {}, order: [] };
+  const empty = { version: STATE_VERSION, global: undefined, globalTier: undefined, sessions: {}, tiers: {}, order: [] };
   const candidates = [file];
   if (/thinking-guard\.json$/.test(file)) candidates.push(file.replace(/thinking-guard\.json$/, 'reasoning-guard.json'));
   let raw;
@@ -85,10 +85,21 @@ function readAll(file) {
   const declared = Array.isArray(raw.order) ? raw.order.map(normalizeId) : [];
   const merged = [...new Set([...declared, ...order])].filter(id => id in sessions);
 
+  // 形状（tier）单存一维：颜色关掉时它还在，用来表达「不整理但会打断」
+  const tiers = {};
+  const rawTiers = raw.tiers && typeof raw.tiers === 'object' ? raw.tiers : {};
+  for (const [key, value] of Object.entries(rawTiers)) {
+    const id = normalizeId(key);
+    if (!id || !Number.isInteger(value) || value < 1 || value > 3) continue;
+    tiers[id] = value;
+  }
+
   return {
     version: STATE_VERSION,
     global: Number.isInteger(raw.global) ? migrate(raw.global) : undefined,
+    globalTier: Number.isInteger(raw.globalTier) && raw.globalTier >= 1 && raw.globalTier <= 3 ? raw.globalTier : undefined,
     sessions,
+    tiers,
     order: merged,
   };
 }
@@ -102,7 +113,9 @@ function writeAll(file, state) {
   const body = JSON.stringify({
     version: STATE_VERSION,
     ...state.global === undefined ? {} : { global: state.global },
+    ...state.globalTier === undefined ? {} : { globalTier: state.globalTier },
     sessions: state.sessions,
+    ...Object.keys(state.tiers ?? {}).length === 0 ? {} : { tiers: state.tiers },
     order: state.order,
   }, null, 2);
   const tmp = `${file}.${process.pid}.tmp`;
@@ -116,6 +129,70 @@ function writeAll(file, state) {
  * @param file - 状态文件路径。
  * @returns 记录的全局值；没有返回 undefined。
  */
+/**
+ * 读某会话的形状档位（1..3）。
+ * @param file - 状态文件路径。
+ * @param sessionId - 会话 id。
+ * @returns 存的档位；没有返回 undefined。
+ */
+export function readSessionTier(file, sessionId) {
+  const id = normalizeId(sessionId);
+  return id ? readAll(file).tiers[id] : undefined;
+}
+
+/**
+ * 写某会话的形状档位；写 1 等于清掉（和默认一样）。
+ * @param file - 状态文件路径。
+ * @param sessionId - 会话 id。
+ * @param tier - 1..3。
+ */
+export function writeSessionTier(file, sessionId, tier) {
+  const id = normalizeId(sessionId);
+  if (!id) return;
+  const state = readAll(file);
+  state.tiers = state.tiers ?? {};
+  if (tier <= 1) delete state.tiers[id];
+  else state.tiers[id] = tier;
+  writeAll(file, state);
+}
+
+/**
+ * 读全局的形状档位。
+ * @param file - 状态文件路径。
+ * @returns 1..3 或 undefined。
+ */
+export function readGlobalTier(file) {
+  return readAll(file).globalTier;
+}
+
+/**
+ * 写全局形状档位，并清掉所有会话的档位。
+ * @param file - 状态文件路径。
+ * @param tier - 1..3。
+ */
+export function writeGlobalTier(file, tier) {
+  const state = readAll(file);
+  if (tier <= 1) delete state.globalTier;
+  else state.globalTier = tier;
+  state.tiers = {};
+  writeAll(file, state);
+}
+
+/**
+ * 当前会话生效的形状档位：会话覆盖 > 全局 > 兜底（跟随 level）。
+ * @param file - 状态文件路径。
+ * @param sessionId - 会话 id。
+ * @param fallback - 没有记录时用什么。
+ * @returns 1..3。
+ */
+export function effectiveTier(file, sessionId, fallback) {
+  const own = readSessionTier(file, sessionId);
+  if (Number.isInteger(own)) return own;
+  const global = readGlobalTier(file);
+  if (Number.isInteger(global)) return global;
+  return fallback;
+}
+
 export function readGlobal(file) {
   return readAll(file).global;
 }

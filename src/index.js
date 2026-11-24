@@ -18,7 +18,7 @@
 import { isLoopback, readJson, sendJson } from './route.js';
 import fs from 'node:fs';
 import { randomUUID } from 'node:crypto';
-import { dshHome, clearSessionLevel, effectiveLevel, normalizeId, readGlobal, readSwitch, writeGlobal, writeSessionLevel } from './state.js';
+import { dshHome, clearSessionLevel, effectiveLevel, effectiveTier, normalizeId, readGlobal, readSwitch, readGlobalTier, writeGlobal, writeGlobalTier, writeSessionLevel, writeSessionTier } from './state.js';
 
 /** Cordis 插件名。 */
 export const name = 'thinking-guard';
@@ -521,6 +521,13 @@ export function apply(ctx, config = {}) {
    * 会话 id 的两种写法在 state 层归一化，这里不用管。
    */
   const levelFor = (sid) => effectiveLevel(file, sid, cfg.level).level;
+  /** 颜色这一维：有没有在整理历史。 */
+  const cleanFor = (sid) => levelFor(sid) >= 1;
+  /** 形状这一维：打断得多狠（颜色关掉时也要能记住 1..3）。 */
+  const tierFor = (sid) => {
+    const lv = levelFor(sid);
+    return lv >= 1 ? lv : effectiveTier(file, sid, 1);
+  };
 
   if (typeof cfg.promptText === 'string' && cfg.promptText.length > 0) {
     ctx.effect(() => ctx.systemPrompt.section({
@@ -561,7 +568,8 @@ export function apply(ctx, config = {}) {
     const session = payload?.agent?.session;
     const sid = session?.id ?? 'global';
     const level = levelFor(sid);
-    if (level < 1) return decision;
+    const tier = tierFor(sid);
+    if (level < 1 && tier < 2) return decision;   // 既不整理、也不打断：什么都不做
 
     // 记下 agent，掐断后要用它主动续一轮
     if (payload?.agent && typeof payload.agent.followup === 'function') {
@@ -599,7 +607,7 @@ export function apply(ctx, config = {}) {
     log(`命中 ${streak} markRun=${metrics.markRun} lines=${metrics.lines} uniq=${metrics.uniq.toFixed(2)} level=${level}`);
 
     // 档位 2 起：命中后退化，下一步收紧 maxTokens（3 档递进里的第二档）
-    if (level >= 2 && cfg.degradedMaxTokens > 0) budgetLeft.set(sid, 1);
+    if (tier >= 2 && cfg.degradedMaxTokens > 0) budgetLeft.set(sid, 1);
 
     if (level >= 4 && cfg.fuseAfter > 0 && streak >= cfg.fuseAfter) {
       hits.delete(sid);
@@ -639,7 +647,7 @@ export function apply(ctx, config = {}) {
       //    改成克隆一个新的 options 再从 this.streamWithRegistration 发起——
       //    cordis 的 waterfall 会把回调绑到 LlmRuntime 上，所以这里的 this 就是它。
       const scrubOn = readSwitch('scrub') ?? cfg.scrubDegenerateHistory;
-      if (scrubOn && lv0 >= 1 && options && typeof options === 'object' && !options[SCRUB_MARK]) {
+      if (scrubOn && cleanFor(sid0) && options && typeof options === 'object' && !options[SCRUB_MARK]) {
         try {
           const before = options.messages;
           const scrubbed = scrubDegenerateReasoning(before, cfg);
@@ -672,8 +680,8 @@ export function apply(ctx, config = {}) {
 
       if (!cfg.streamKillEnabled) { trace('未启用，透传'); yield* next(); return; }
       const sid = options?.sessionId ?? 'global';
-      const killLevel = levelFor(sid);
-      if (killLevel < 2) { trace('强度不足 2，透传'); yield* next(); return; }
+      const killLevel = tierFor(sid);
+      if (killLevel < 2) { trace('档位不足 2，透传'); yield* next(); return; }
       // 档 2 = 慢速掐断（followup 续轮，等十几秒但历史干净）；档 3+ = 快速（伪造只读调用，<1s）
       const useFastContinue = killLevel >= 3 && cfg.streamKillFastContinue;
 
@@ -861,6 +869,7 @@ export function apply(ctx, config = {}) {
           return sendJson(res, 200, {
             ok: true,
             level: effective.level,
+            tier: effective.level >= 1 ? effective.level : effectiveTier(file, sid, 1),
             scope: effective.scope,
             global: readGlobal(file) ?? null,
             max: MAX_LEVEL,
@@ -890,10 +899,17 @@ export function apply(ctx, config = {}) {
           if (!Number.isInteger(level) || level < 0 || level > MAX_LEVEL) {
             return sendJson(res, 400, { ok: false, error: 'level 必须是 0..' + MAX_LEVEL + ' 的整数' });
           }
+          // 形状档位：不传就跟着 level 走（level>=1 时两者一致）
+          const rawTier = body?.tier === undefined ? level : Number(body.tier);
+          if (!Number.isInteger(rawTier) || rawTier < 1 || rawTier > 3) {
+            return sendJson(res, 400, { ok: false, error: 'tier 必须是 1..3 的整数' });
+          }
+          const tier = rawTier;
           if (body?.scope === 'global') {
             writeGlobal(file, level);
-            log(`滑条 → 全局默认 ${level}（已清掉所有会话特例）`);
-            return sendJson(res, 200, { ok: true, level, scope: 'global', global: level, max: MAX_LEVEL });
+            writeGlobalTier(file, tier);
+            log(`档位 → 全局默认 ${level} / 形状 ${tier}（已清掉所有会话特例）`);
+            return sendJson(res, 200, { ok: true, level, tier, scope: 'global', global: level, max: MAX_LEVEL });
           }
           const sid = normalizeId(typeof body?.sessionId === 'string' ? body.sessionId : '');
           if (!sid) return sendJson(res, 400, { ok: false, error: 'scope=session 时必须给 sessionId' });
@@ -901,17 +917,20 @@ export function apply(ctx, config = {}) {
           const inherited = Number.isInteger(readGlobal(file)) ? readGlobal(file) : cfg.level;
           if (level === inherited) {
             clearSessionLevel(file, sid);
-            log(`滑条 → 会话 ${sid.slice(0, 8)} 回到默认 ${level}（已清掉覆盖）`);
+            writeSessionTier(file, sid, tier);
+            log(`档位 → 会话 ${sid.slice(0, 8)} 回到默认颜色 ${level}，形状 ${tier}`);
             return sendJson(res, 200, {
               ok: true,
               level,
+              tier,
               scope: Number.isInteger(readGlobal(file)) ? 'global' : 'default',
               max: MAX_LEVEL,
             });
           }
           writeSessionLevel(file, sid, level);
-          log(`滑条 → 会话 ${sid.slice(0, 8)} 强度 ${level}`);
-          return sendJson(res, 200, { ok: true, level, scope: 'session', max: MAX_LEVEL });
+          writeSessionTier(file, sid, tier);
+          log(`档位 → 会话 ${sid.slice(0, 8)} 颜色 ${level} / 形状 ${tier}`);
+          return sendJson(res, 200, { ok: true, level, tier, scope: 'session', max: MAX_LEVEL });
         }
         return sendJson(res, 405, { ok: false, error: 'method not allowed' });
       },
