@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 340" width="900" height="340" role="img" aria-label="Click to toggle cleaning · drag sideways to pick a tier,drag up to apply everywhere">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 360" width="900" height="360" role="img" aria-label="Click to toggle cleaning · drag sideways to pick a tier,drag up to apply everywhere">
   <style>
     text { font-family: 'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',system-ui,sans-serif; }
     .cap { font-size: 15px; font-weight: 600; fill: #33404d; }
@@ -9,7 +9,7 @@
   <defs>
     <filter id="b" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="7"/></filter>
   </defs>
-  <rect width="900" height="340" fill="#ffffff"/>
+  <rect width="900" height="360" fill="#ffffff"/>
   
   <g>
     <circle cx="150" cy="120" r="30" fill="#5d9c83" opacity="0.28" filter="url(#b)"/>
@@ -50,10 +50,10 @@
     <rect x="708" y="150" width="84" height="21" rx="10.5" fill="#f3f1ff" stroke="#ddd6fe"/>
     <text x="750" y="165" text-anchor="middle" class="tag" fill="#7c5cf0">all sessions</text>
   </g>
-  <text x="150" y="254" text-anchor="middle" class="scene">Click: cleaning on/off</text>
-  <text x="450" y="254" text-anchor="middle" class="scene">Drag: pick a tier</text>
-  <text x="750" y="254" text-anchor="middle" class="scene">Drag up: all sessions</text>
-  <text x="450" y="282" text-anchor="middle" class="cap">Click to toggle cleaning · drag sideways to pick a tier</text>
-  <text x="450" y="304" text-anchor="middle" class="cap">drag up to apply everywhere</text>
-  <text x="450" y="322" text-anchor="middle" class="sub">colour = history cleaning, shape = how hard it hits</text>
+  <text x="150" y="252" text-anchor="middle" class="scene">Click: cleaning on/off</text>
+  <text x="450" y="252" text-anchor="middle" class="scene">Drag: pick a tier</text>
+  <text x="750" y="252" text-anchor="middle" class="scene">Drag up: all sessions</text>
+  <text x="450" y="290" text-anchor="middle" class="cap">Click to toggle cleaning · drag sideways to pick a tier</text>
+  <text x="450" y="314" text-anchor="middle" class="cap">drag up to apply everywhere</text>
+  <text x="450" y="348" text-anchor="middle" class="sub">colour = history cleaning, shape = how hard it hits</text>
 </svg>

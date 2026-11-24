@@ -5,9 +5,9 @@
     .name { font-size: 52px; font-weight: 800; fill: #1e293b; letter-spacing: -1px; }
     .hook { font-size: 25px; font-weight: 700; fill: #3b6ea5; }
     .hookEn { font-size: 20px; font-weight: 600; fill: #3b6ea5; opacity: 0.85; }
-    .claim { font-size: 16px; fill: #55616e; }
-    .claimEn { font-size: 14px; fill: #7b8794; }
-    .stat { font-size: 13px; fill: #8a94a1; font-family: ui-monospace,Menlo,Consolas,'Courier New',monospace; }
+    .claim { font-size: 17px; fill: #3f4b59; }
+    .claimEn { font-size: 15px; fill: #46525f; }
+    .stat { font-size: 14px; fill: #46525f; font-family: ui-monospace,Menlo,Consolas,'Courier New',monospace; }
   </style>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0.35" y2="1">
