@@ -6,7 +6,7 @@
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-2dd4bf"></a>
   <a href="package.json"><img alt="Node" src="https://img.shields.io/badge/node-%3E%3D20-60a5fa"></a>
   <a href="package.json"><img alt="DSH" src="https://img.shields.io/badge/DSH-%E2%89%A50.2.0--rc.1-a78bfa"></a>
-  <img alt="tests" src="https://img.shields.io/badge/tests-70%20passing-4ade80">
+  <img alt="tests" src="https://img.shields.io/badge/tests-68%20passing-4ade80">
   <img alt="version" src="https://img.shields.io/badge/version-2.0.0-f59e0b">
 </p>
 
@@ -24,8 +24,9 @@
 
 <p align="center">
   Cutting loses the second half of a thought. Replacing a whole block throws the good part away with the bad.<br>
-  Measured: 29% of the lines are filler, but only 8% of the characters — strip that 8% and
-  <b>92% of the reasoning still reaches the model</b>.
+  Measured on the worst sessions: filler ate 20–33% of the lines but only 3.6–6.7% of the characters —
+  strip that sliver and <b>93–96% of the reasoning still reaches the model</b>.<br>
+  Across all 17,386 blocks we have on disk, it strips 0.28%.
 </p>
 
 <p align="center">
@@ -43,6 +44,9 @@
   <a href="#-install">Install</a> ·
   <a href="#-the-glyph">Tiers</a> ·
   <a href="#-why-it-works">Why</a> ·
+  <a href="#-what-counts-as-a-loop">Detector</a> ·
+  <a href="#-does-the-meaning-survive">Meaning</a> ·
+  <a href="#-where-the-numbers-come-from">Data</a> ·
   <a href="#-configuration">Config</a>
 </p>
 
@@ -139,10 +143,10 @@ Only after all that did I land on "count inside the stream and cut it" — and t
 
 ## 🛠 What it does
 
-Two layers. **The first one is the main road — not on the slider, always on**:
+Two layers. **The first one is the main road — it runs whenever the colour is on**:
 
 > Before each request, every line that is nothing but 「做。」「好。」「嗯。」 is dropped from the history, and the rest is kept verbatim.
-> Measured: the stripped characters are 3.5–8.2% of the block — **92–96% of the reasoning still reaches the model**.
+> Measured on the worst sessions: the strip removes 3.6–6.7% of the characters, so **93–96% of the reasoning still reaches the model**. Averaged over all 17,386 blocks on our disks it removes 0.28% — most blocks carry no filler at all.
 
 <p align="center">
   <img src="assets/strip-keep-en.svg" alt="Only the filler lines are dropped; every real sentence stays" width="880">
@@ -150,26 +154,26 @@ Two layers. **The first one is the main road — not on the slider, always on**:
 
 That layer is what breaks the self-reinforcement loop — the model sees what it wrote, minus the filler, and stops imitating it. Cutting loses the second half of a thought; replacing a whole block throws the good part away with the bad; stripping line by line does neither. Details in [Why it works](#-why-it-works)
 
-**The second layer is the fallback — the five-tier slider**, and it only fires on a real loop (one adjacent pair repeating ≥8 times, filler lines ≥15% of the block):
+**The second layer is the fallback — the two cutting tiers**, and it fires on one of two shapes: one adjacent pair repeating ≥8 times while filler lines make up ≥15% of the block, or 15 consecutive short lines (1–6 characters) at the tail, once the thought has run past 150 characters:
 
-| Tier | What it does | Price |
-|---|---|---|
-| 0 Off | Nothing at all | none |
-| 1 Notice | Bans the empty verbs in the system prompt and hands over a closing template | a few dozen characters per request |
-| **2 Cut slow** (default) | Cuts the generation, then resumes via followup | waits 7–21 s, history stays clean |
-| 3 Cut fast | Cuts, then injects a read-only tool call so the turn keeps going | a fake record in history, latency under 1 s |
-| 4 Abort | The third loop in a row kills the turn | you get a failed-run message |
+| Tier | Name | What it does | Price |
+|---|---|---|---|
+| 0 | Off | No cleaning, no cutting. **The system-prompt section is still registered** (~100 characters; blank out `promptText` to silence that too) | those characters |
+| **1** | **Clean** (default) | Lossless stripping plus the system-prompt section, **never interrupts** | slightly larger request, not one character touched |
+| 2 | Slow | Tier 1 + cuts a real loop, then resumes via followup | waits 7–21 s, history stays clean |
+| 3 | Fast | Tier 1 + cuts, then synthesizes a read-only call so the turn keeps going | a fake record in history, latency under 1 s |
 
-Two more guards, also not on the slider:
+> The fuse tier (the old fifth) is retired — it killed the whole turn, and the cooldown window already stops cascades. `stop_sequences` went the same way. Both still exist in code, but their thresholds now sit where the interface cannot reach.
+
+Two more guards, also not on the glyph:
 
 - **Cooldown** — three cuts inside ten minutes puts that session on a five-minute pass-through, so a working conversation never gets chopped into confetti
 - **Compensation** — a cut block hands its last few real lines back to the model in the after-cut message, so it does not have to re-derive them
 
 > [!WARNING]
-> **Raising the tier really does change behaviour, and one tier writes a fake record into your session history.**
+> **Raising the tier really does change behaviour, and the top tier writes a fake record into your session history.**
 >
 > - **Tier 3 synthesizes a `get_goal` tool call** to push the turn forward. That record is **fake**; it stays in history and the model can see it on the next step. Pick it only if you would rather trade a clean history for not waiting
-> - **Tier 4 kills the turn outright.** You will see a failed-run message and that turn's work is gone
 > - **Tier 2 writes nothing fake**, but costs 7–21 seconds
 > - **Tier 1 never touches a generation** — it only adds a few dozen characters to the system prompt. Stay there if unsure
 
@@ -187,7 +191,7 @@ Two more guards, also not on the slider:
 2. **Windows: just double-click `install.cmd`** — it uses the built-in PowerShell, so no Git, no Node.js and no pnpm are needed
 3. macOS / Linux: run `bash install.sh` (that path needs Node.js + pnpm)
 4. The only thing left after the script finishes: **restart DSH yourself**
-5. After the restart you get a five-segment slider at the right of the composer toolbar
+5. After the restart you get a single glyph at the right of the composer toolbar — a green circle in the default Clean tier
 
 The script does exactly four things: back up the profile's `package.json`, add a `link:` dependency, register the package in `dsh.profile.bundles`, and create the `node_modules` junction that `pnpm install` would normally create. **It never touches session data and never restarts your DSH**
 
@@ -202,7 +206,7 @@ pnpm add link:<absolute path to this folder> -w
 
 Then add the package name to `dsh.profile.bundles` in that profile's `package.json`, and **restart DSH yourself**
 
-**Rolling back**: remove the `link:` dependency and the `bundles` entry, restart. The plugin writes nothing of yours — the only file it owns is `$DSH_HOME/thinking-guard.json` (per-conversation tiers), and deleting that is harmless
+**Rolling back**: remove the `link:` dependency and the `bundles` entry, restart. The plugin owns two files, both harmless to delete: `$DSH_HOME/thinking-guard.json` (the colour and shape per conversation plus the global default) and `$DSH_HOME/thinking-guard-trace.log` (set `traceEnabled: false` to stop writing it). It never writes to your session logs
 
 ---
 
@@ -221,10 +225,11 @@ Then add the package name to `dsh.profile.bundles` in that profile's `package.js
 </p>
 
 - **Click**: toggles colour, i.e. toggles history cleaning — green = working, grey = not cleaning
-- **Drag sideways**: changes the shape, i.e. the tier (circle → triangle → square), one step per 26px
+- **Drag sideways**: changes the shape, i.e. the tier (circle → triangle → square), one step per 18px; the three shapes fan out while you drag, and you can just click one
 - **Colour covers cleaning, shape covers cutting** — two channels, one job each, readable at a glance
-- The two cutting tiers (triangle / square) **ask for confirmation every time** you enter them
-- Hover shows an explanation in your system language
+- Entering either cutting tier (triangle / square) shows a three-second line above the glyph — "this tier really interrupts generation" — and it disappears when you click elsewhere. There is **no confirm dialog**, but the tier does bite
+- Hover for 600 ms brings up the explanation (moving into the tooltip keeps it open, so the star link is clickable), in your system language
+- Keyboard works too: ← → change tier, Space / Enter toggles cleaning
 
 ---
 
@@ -296,6 +301,151 @@ So the plugin leaves you alone by default, and only moves at that moment
 
 ---
 
+## 🔍 What counts as a loop
+
+Two sets of criteria: one decides whether this turn should be stopped, the other decides whether a finished block is rotten.
+
+**Mid-stream (decides the cut)** — adjacent pairs have been the main signal since v0.3.0:
+
+| Condition | Meaning |
+|---|---|
+| one adjacent line pair repeating ≥ `streamKillRepeatMin` (8) **and** filler lines ≥ `streamKillRepeatRatioMin` (15%) | the main detector. A real loop is 「好。→做。」 over and over, and stylistic filler never climbs that high |
+| or trailing 1–6 character lines ≥ `streamKillRun` (15), with ≥ `streamKillMinChars` (150) characters written | the older rule, kept for long runs |
+| blocks under `streamKillRepeatMinLines` (20) lines | adjacent pairs are not counted |
+
+**Block-level (used at pre-step, judges a finished block)**:
+
+| Condition | Meaning |
+|---|---|
+| a run of ≥ `maxRun` (25) filler lines | degenerate, straight away |
+| or a run of ≥ `looseRun` (15) with a unique-line ratio ≤ `looseUniq` (0.4) | catches the short-and-dense ones |
+| under `minLines` (10) lines | not judged at all |
+
+The two scales differ on purpose: below ten lines a share means nothing, while mid-stream has to win a race, so it is looser.
+
+**Why "share of short lines" is not the main rule**: it flags real analysis leads like 「可能：」 or 「我该：」 as filler — five false positives in testing. The line-based density rule retired for the same reason before v0.3.0: a 「做。」 line is 2 characters, so 26% of the lines was only 3% of the characters, and on live traffic it cut 11 normal thoughts in 21 minutes.
+
+**How much headroom**: outside the session that blew up (its normal blocks peaked at 20 lines), the other five sessions held 968 normal blocks whose longest filler run was 1–3 lines; genuinely degenerate blocks started at 40. The threshold of 25 sits between them with room on both sides.
+
+**English needs its own detector.** English filler does not fall into one-word lines like 「好。」 — it lives inside sentences: `Let me check it. Let me run the build.` over and over. The line-level rule is blind to it (0 hits across 4,504 pure-English blocks, not because they were clean, because they were invisible). So there is a sentence-level set:
+
+| Condition | Meaning |
+|---|---|
+| one sentence (normalised) covering ≥ `englishDupRatioMin` (0.30) of all sentences, with ≥ `englishMinSentences` (12) sentences | whole sentences repeating |
+| or the same first four words repeating ≥ `englishGramMin` (10) times, with ≥ `englishGramMinSentences` (20) sentences | catches `Let me …` clones |
+
+Those thresholds come from those 4,504 real English blocks: duplicate-sentence share p99 0.10, max 0.267; the most repeated four-word opener appeared 9 times (a block re-reading a file path). At 0.30 / 10, **zero false positives** on our corpus. **Recall is unverified** — there is not a single real English loop sample in our data, so only someone who hits one can tell us.
+
+---
+
+## 🎯 Does the meaning survive?
+
+This is the actual selling point, so it has to be checkable — not just a claim that "we keep 92%"
+
+Three premises, each measured
+
+**One: every dropped line carries no information of its own**
+
+All 25,830 dropped lines, checked one by one:
+
+| Check | Result |
+|---|---|
+| Contains a comma / colon / bracket (i.e. plays a part in a sentence) | **0 lines** |
+| Contains a reference — 「这个 / 它 / 该 / 刚才」 (this, it, that, just now) | **0 lines** |
+| Distinct spellings | 21, all bare verbs — 「做。」「好。」「嗯。」「写。」「（调用）」「执行。」 |
+
+**Two: what is left is a strict subsequence of the original**
+
+All 2,946 touched blocks compared line by line: every surviving line appears in the original, in the original order, **2,946 / 2,946 pass**; content that does not exist in the original: **0 characters**
+
+So it is a subtraction, nothing else — no rewriting, no stitching, no reordering
+
+**Three: nothing gets cut mid-sentence**
+
+23,757 dropped lines sat in the middle of a block, 2,074 at the end, **0 at the beginning**
+
+Only **4 lines** had an unclosed punctuation mark (a 「，」 or 「：」) in front of them. All four, read:
+
+| Case | Example | Verdict |
+|---|---|---|
+| A code semicolon | `const ok=…;` ⏎ 「好。」 | False positive — a code line ending, not a sentence break |
+| A code semicolon | `slot.timer = setTimeout(…);` ⏎ 「调用。」 | Same, and it is the last line anyway |
+| Text already broken | `**我的判断：**` ⏎ 「嗯。」 ⏎ `我的判断：` | The line after it is filler too; nothing is lost |
+| Text already broken | `**再软一点**：` ⏎ 「好。」 ⏎ 「写。」 | That line gets dropped as well; there was nothing there to begin with |
+
+Put together: the removed lines carry nothing, what remains is byte-for-byte the original lines, and not one cut lands inside a sentence — **the meaning has no room to change**
+
+### Eight blocks, read by hand
+
+After the machine pass I pulled eight real blocks and read each one, all three versions side by side in [the samples](docs/semantic-samples.md)
+
+| Sample | Original | Stripped | Can you still tell what it decided? | Whole-block replace |
+|---|---|---|---|---|
+| 1 | 65 lines / 813 chars | 20.2% | Yes — three conclusions, a suggestion, the fix | No |
+| 2 | 47 lines / 532 chars | 24.1% | Yes — verification steps 1/2/3 | No |
+| 3 | 115 lines / 1233 chars | 30.1% | Yes — style diagnosis plus a controlled experiment | No |
+| 4 | 118 lines / 999 chars | 33.5% | Yes — three fixes and the exact line positions | No |
+| 5 | 122 lines / 999 chars | 37.9% | Yes — the full safe-zone spec | No |
+| 6 | 131 lines / 946 chars | 44.0% | Yes — three directions and where to mine them | No |
+| 7 | 69 lines / 455 chars | 49.2% | Yes — which memory to update, how to close out | No |
+| 8 | 107 lines / 691 chars | 55.0% | Yes — the new approach and which fields to grab | No |
+
+8 of 8 still say what the block was trying to do. Through whole-block replacement the same eight become one「omitted」line each — unreadable
+
+### One honest limit
+
+What survives is not pure signal
+
+Sample 6 still carries 「嗯，执行。」「嗯，动手。」「嗯，写命令。」 — **half-filler**: they contain a comma and an action verb, so the rule does not classify them and they stay
+
+That is deliberate. Better to strip too little than to delete something real. Those lines were already in the original; they are not among the removed shells, and they do not weaken the claim that the removed part carries no information. Catching them is a job for the sentence-level rule, not the line-level one
+
+Check it yourself:
+
+```bash
+node scripts/check-semantic-integrity.mjs            # the three premises, corpus-wide
+node scripts/dump-pairs.mjs --n 8 --out pairs.md     # export your own side-by-side samples
+```
+
+---
+
+## 📊 Where the numbers come from
+
+None of the percentages above were eyeballed. The corpus is **17,386 reasoning blocks** from 184 sessions on my machine — 461,430 lines, 38 million characters — measured with the plugin's own `stripPlaceholderLines()`, so what gets measured is what actually runs.
+
+| Item | Value (2026-11-25 snapshot) |
+|---|---|
+| Session files | 184 |
+| Reasoning blocks | 17,386 |
+| Lines / characters | 461,430 / 38,012,892 |
+| Filler lines | 25,828 (5.60% of all lines) |
+| Filler characters | 53,407 (0.14% of all characters) |
+
+**Across every block**: 38,012,892 characters untouched, 37,907,834 (99.72%) after stripping — the entire corpus loses about 105k characters.
+
+**On the 69 blocks the block-level criterion calls degenerate**, the two approaches split hard:
+
+| Approach | Kept | Share of original |
+|---|---|---|
+| Line-by-line strip (this plugin) | 36,116 characters | **55.69%** |
+| Whole-block replace (everybody else) | 1,311 characters | 2.02% |
+
+Same 69 blocks, same 64,854 characters. Whole-block replacement throws nearly all of it away — one「omitted」line per block — while line-by-line strip keeps more than half. **That table is the entire basis for the "information retention" claim.**
+
+One more: of those 69 blocks, **0** end up empty after stripping. Not one was pure filler, so every block kept some real text; only a block that strips down to zero characters falls back to the marker.
+
+**Run it yourself**:
+
+```bash
+node scripts/measure-scrub.mjs                     # scans $DSH_HOME/sessions by default
+node scripts/measure-scrub.mjs /path/to/sessions   # point it at another corpus
+node scripts/measure-scrub.mjs --json              # machine-readable
+```
+
+**Limits**: this is a local corpus, not a public dataset — another corpus will give different numbers. It also drifts: it was 17,386 blocks while this page was written, and it is not that number an hour later. Trust the order of magnitude, not the last digit.
+
+---
+
 <p align="center">
   <img src="assets/head2en/cfg.svg" alt="" width="100%">
 </p>
@@ -308,12 +458,12 @@ Any key can be overridden from the profile patch
 
 | Key | Default | Meaning |
 |---|---|---|
-| `level` | `2` | Fallback intensity when a conversation has no slider record (0–4) |
+| `level` | `1` | Fallback intensity when a conversation has no stored record (0–3: off / clean / slow / fast) |
 | `maxRun` | `25` | Consecutive marker lines before it counts as a loop (strict rule: contentless imperatives only) |
 | `looseRun` | `15` | Loose threshold, used together with `looseUniq` |
 | `looseUniq` | `0.4` | Max unique-line ratio under the loose rule, so repeated-but-real content is not flagged |
 | `minLines` | `10` | Below this many lines nothing is judged at all |
-| `fuseAfter` | `3` | Consecutive hits before aborting the turn (tier 4 only). 0 disables |
+| `fuseAfter` | `3` | **Retired** (the old tier-4 fuse). It needs `level >= 4`, and the interface and state file stop at 3 — only a hand-written `level: 4` in the profile patch wakes it up |
 
 #### Remedies
 
@@ -321,8 +471,8 @@ Any key can be overridden from the profile patch
 |---|---|---|
 | `promptText` | one Chinese sentence | System-prompt section. Empty means not registered |
 | `noticeText` | `''` | Notice text for the next step. Empty means never inject. Supports `{maxRun}` `{lines}` `{ratio}` |
-| `stopSequences` | three Chinese trigrams | Sequences attached to the request, at most 16. **Measured to affect the answer body only, not thinking** |
-| `stopEnabled` | `true` | Whether to attach `stop` sequences from tier 2 up |
+| `stopSequences` | three Chinese trigrams | **Retired.** Measured to affect the answer body only, never thinking; the attach threshold now sits at `level >= 99`, so nothing reaches it except a hand-written `level: 99` |
+| `stopEnabled` | `true` | **Retired**, same story. The master switch for cutting is `streamKillEnabled` |
 | `scrubDegenerateHistory` | `true` | Rewrite degenerate reasoning in the history before each request (the real fix) |
 | `scrubMode` | `strip` | `strip` deletes filler lines and keeps the content; `squash` replaces the whole block |
 | `scrubStripMinDropped` | `5` | In strip mode, a block must lose at least this many lines before it is touched |
@@ -370,7 +520,7 @@ Some things are worth flipping mid-conversation — most of all, turning the his
 
 The file is read by mtime, so the next request picks it up. No restart. The middleware evaluates `readSwitch('scrub') ?? cfg.scrubDegenerateHistory`, so the config stays the source of truth until you override it.
 
-How to run an honest A/B in one session: leave the history as it is (the plugin never edits it), ask the same heavy question twice, and flip the switch in between. Measured on a real session: rewrite on → 8.1% filler lines; off → 19.2% and the 「做。⏎好。」 pair came back.
+How to run an honest A/B in one session: leave the history as it is (the plugin never edits it), ask the same heavy question twice, and flip the switch in between. Doing that earlier in one session: with rewriting on the 「做。⏎好。」 pair stopped appearing; with it off the pair came back.
 
 ### One parameter that fools people
 
@@ -380,9 +530,11 @@ How to run an honest A/B in one session: leave the history as it is (the plugin 
 
 ## ⚠️ Known unverified
 
-- **The 4th tier has never fired naturally.** The trigger needs three real loops inside one turn, which is rare in practice. It is covered by unit tests, but nobody has seen it in the wild
-- **The synthesized continuation has only been exercised through the test hook**, not by a genuinely degenerate rollout
+- **The synthesized continuation has only been exercised through the test hook**, not by a genuinely degenerate rollout. When it does fire, a fake `get_goal` call lands in your history — that is the price, stated up front
 - **`get_goal` may not exist in every preset.** If it is missing the call fails, but the finish reason is already `tool-calls`, so the turn continues anyway — you just get an error entry in history
+- **Recall rests on the one session that blew up**; precision is zero false positives across 968 normal blocks in five other sessions
+- **The English detector's recall is unverified** (precision: zero false positives on 4,504 real English blocks) — there is not a single English loop sample in our corpus
+- **`stop_sequences` does not touch thinking — falsified 2026-11-24.** The code path works (`config.stop` → `GenerateOptions.stop` → serialised into `stop_sequences`, visible in the request headers), the server accepted it, and the stream still ran to line 121 after the naked trigram showed up on line 19. That is why the attach threshold now sits at `level >= 99`
 
 ---
 
@@ -401,7 +553,9 @@ node scripts/replay-block.mjs block.txt --json   # machine-readable
 
 `block.txt` is one verbatim reasoning block. The script reports four things: filler-line share, how many characters the strip keeps, whether the block-level criterion calls it degenerate, and where (if anywhere) the streaming criterion would cut.
 
-**65 cases**, covering: detector maths (strict and loose rules, blank-line skipping), per-tier behaviour, stream-cut thresholds, the adjacent-pair detector, the cooldown window, cut compensation, line-by-line history scrubbing and the re-dispatch path, the synthesized continuation, followup resumption and the no-duplicate-notice rule, the test hook requiring a session id, stop merging and the 16 limit, notice template substitution, abort and streak reset, per-session state isolation and corrupt-file tolerance, slider routes, and the browser-half load protocol
+To see how the two approaches diverge across a **whole corpus**, run `scripts/measure-scrub.mjs` — the numbers and the comparison table live in [Where the numbers come from](#-where-the-numbers-come-from).
+
+**68 cases**, covering: detector maths (strict and loose rules, blank-line skipping), per-tier behaviour (including tier 1 never shrinking the budget and tier 2 shrinking exactly one step), stream-cut thresholds and early give-up, the adjacent-pair detector, the English sentence detector, the cooldown window, cut compensation, line-by-line history scrubbing and the re-dispatch path, the runtime switch, the synthesized continuation, followup resumption and the no-duplicate-notice rule, the test hook requiring a session id, the retired stop path and its 16-item limit, notice template substitution, per-session state isolation and corrupt-file tolerance, the two-axis colour-plus-shape store, the loopback route, and the browser-half load protocol
 
 ---
 

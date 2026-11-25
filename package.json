@@ -1,7 +1,7 @@
 {
   "name": "dsh-thinking-guard",
   "version": "2.0.0",
-  "description": "Reasoning-loop guard: detect and cut the placeholder loop (做。/好。) that models fall into inside the thinking channel, with one intensity slider.",
+  "description": "Reasoning-loop guard: strips the placeholder lines (做。/好。) that models fall into inside the thinking channel, keeps every real sentence, and only cuts a genuine loop.",
   "type": "module",
   "license": "MIT",
   "keywords": [
@@ -10,7 +10,7 @@
     "plugin",
     "reasoning",
     "loop-guard",
-    "stop-sequences",
+    "history-scrub",
     "composer"
   ],
   "main": "src/index.js",
