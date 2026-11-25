@@ -25,7 +25,7 @@
 <p align="center">
   Cutting loses the second half of a thought. Replacing a whole block throws the good part away with the bad.<br>
   When a model gets stuck it writes the same sentence over and over — in one real record, 602 of 686 lines were the same line.<br>
-  The plugin drops those repeat lines before each request and leaves the rest untouched: across 17,633 reasoning blocks, <b>99.8% of the characters survive</b>.
+  The plugin drops those repeat lines before each request and leaves the rest untouched — <b>in the sessions that actually got stuck, 95–97% of the characters survive</b>.
 </p>
 
 <p align="center">
@@ -145,7 +145,7 @@ Only after all that did I land on "count inside the stream and cut it" — and t
 Two layers. **The first one is the main road — it runs whenever the colour is on**:
 
 > Before each request, every line that is nothing but 「做。」「好。」「嗯。」 is dropped from the history, and the rest is kept verbatim.
-> Across 17,633 reasoning blocks: **99.8% of the characters still reach the model**, with just 0.21% stripped — most blocks contain no repeat at all. Even the 69 worst ones keep 66%, where whole-block deletion throws away 98%.
+> **In the sessions that actually got stuck, 95–97% of the characters still reach the model**; even the 69 worst blocks keep 66%, where whole-block deletion throws away 98%. Ordinary sessions barely get touched — 0.21% stripped across the whole corpus.
 
 <p align="center">
   <img src="assets/strip-keep-en.svg" alt="Only the filler lines are dropped; every real sentence stays" width="880">
@@ -430,6 +430,8 @@ None of the percentages above were eyeballed. The corpus is **17,633 reasoning b
 | Filler characters | 53,585 (0.14% of all characters) |
 
 **Across every block**: 38,391,706 characters untouched, 38,312,307 (99.79%) after stripping — the entire corpus loses about 79k characters.
+
+> **Do not sell that 99.8%.** Its denominator is tens of thousands of blocks that never got stuck, so the number drifts toward 100% as the corpus grows — collect a few more conversations and it becomes 99.9%. What matters is the sessions that actually broke: 95–97% there, and 66% on the worst 69 blocks (whole-block deletion keeps 2%).
 
 **On the 69 blocks the block-level criterion calls degenerate**, the two approaches split hard:
 

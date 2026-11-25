@@ -78,5 +78,5 @@
   <rect width="1280" height="640" fill="url(#glow)"/>
   <text x="640" y="268" text-anchor="middle" class="name">dsh-thinking-guard</text>
   <text x="640" y="352" text-anchor="middle" class="hook">它不是在思考，是卡住了</text>
-  <text x="640" y="428" text-anchor="middle" class="stat">只删重复，99.8% 原样保留</text>
+  <text x="640" y="428" text-anchor="middle" class="stat">真卡住的时候，95% 的推理还留着</text>
 </svg>
