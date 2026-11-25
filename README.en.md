@@ -24,9 +24,8 @@
 
 <p align="center">
   Cutting loses the second half of a thought. Replacing a whole block throws the good part away with the bad.<br>
-  Measured on the worst sessions: filler ate 20–33% of the lines but only 2.7–5.0% of the characters —
-  strip that sliver and <b>95–97% of the reasoning still reaches the model</b>.<br>
-  Across all 17,633 blocks we have on disk, it strips 0.21%.
+  Across all 17,633 reasoning blocks on our disks: <b>99.8% of the reasoning survives</b> — only 0.21% is stripped.<br>
+  Even the <b>69 worst blocks</b> keep 66% of their characters, where whole-block replacement throws away 98%.
 </p>
 
 <p align="center">
@@ -146,7 +145,7 @@ Only after all that did I land on "count inside the stream and cut it" — and t
 Two layers. **The first one is the main road — it runs whenever the colour is on**:
 
 > Before each request, every line that is nothing but 「做。」「好。」「嗯。」 is dropped from the history, and the rest is kept verbatim.
-> Measured on the worst sessions: the strip removes 2.7–5.0% of the characters, so **95–97% of the reasoning still reaches the model**. Averaged over all 17,633 blocks on our disks it removes 0.21% — most blocks carry no filler at all.
+> Across all 17,633 blocks: **99.8% of the reasoning still reaches the model**, with just 0.21% stripped — most blocks carry no filler at all. Even the 69 worst degenerate blocks keep 66% of their characters, where whole-block replacement throws away 98%.
 
 <p align="center">
   <img src="assets/strip-keep-en.svg" alt="Only the filler lines are dropped; every real sentence stays" width="880">
