@@ -138,7 +138,7 @@ Only after all that did I land on "count inside the stream and cut it" — and t
 ---
 
 <p align="center">
-  <img src="assets/head2en/what.svg" alt="" width="100%">
+  <img src="assets/head2en/what-v2.svg" alt="" width="100%">
 </p>
 
 ## 🛠 What it does

@@ -137,7 +137,7 @@
 ---
 
 <p align="center">
-  <img src="assets/head/what.svg" alt="" width="880">
+  <img src="assets/head/what-v2.svg" alt="" width="880">
 </p>
 
 ## 🛠 它做了什么
