@@ -7,7 +7,7 @@
   <a href="package.json"><img alt="Node" src="https://img.shields.io/badge/node-%3E%3D20-60a5fa"></a>
   <a href="package.json"><img alt="DSH" src="https://img.shields.io/badge/DSH-%E2%89%A50.2.0--rc.1-a78bfa"></a>
   <img alt="tests" src="https://img.shields.io/badge/tests-68%20passing-4ade80">
-  <img alt="version" src="https://img.shields.io/badge/version-2.0.1-f59e0b">
+  <img alt="version" src="https://img.shields.io/badge/version-2.0.2-f59e0b">
 </p>
 
 <p align="center">
@@ -193,9 +193,9 @@ Two more guards, also not on the glyph:
 4. The only thing left after the script finishes: **restart DSH yourself**
 5. After the restart you get a single glyph at the right of the composer toolbar — a green circle in the default Clean tier
 
-The script does exactly four things: back up the profile's `package.json`, add a `link:` dependency, register the package in `dsh.profile.bundles`, and create the `node_modules` junction that `pnpm install` would normally create. **It never touches session data and never restarts your DSH**
+The script **runs its steps in a deliberate order**: preflight (plugin folder, profile shape, link slot) → back up the original manifest **bytes** → write a temp manifest and parse-check it → create a temp junction and verify it resolves → rename the old link aside → move the new link into place → commit the manifest → cross-check both. Any failure unwinds in reverse order; if the automatic rollback itself fails, it prints the exact paths for manual recovery. **It never touches session data and never restarts your DSH**
 
-If something goes wrong, copy the `package.json.bak` from the backup folder it printed back over the profile, delete `node_modules/dsh-thinking-guard`, and restart
+If something goes wrong, copy the `package.json.bak` from the backup folder it printed back over the profile, delete `node_modules/dsh-thinking-guard`, and restart. A first-time install and an upgrade over an existing link roll back the same way — the installer prints both paths.
 
 ### Manual install (if you know what you are doing)
 
@@ -227,9 +227,10 @@ Then add the package name to `dsh.profile.bundles` in that profile's `package.js
 - **Click**: toggles colour, i.e. toggles history cleaning — green = working, grey = not cleaning
 - **Drag sideways**: changes the shape, i.e. the tier (circle → triangle → square), one step per 18px; the three shapes fan out while you drag, and you can just click one
 - **Colour covers cleaning, shape covers cutting** — two channels, one job each, readable at a glance
-- Entering either cutting tier (triangle / square) shows a three-second line above the glyph — "this tier really interrupts generation" — and it disappears when you click elsewhere. There is **no confirm dialog**, but the tier does bite
+- **Turning the colour off does not turn cutting off**: a grey circle means cleaning off *and* no cutting; a **grey triangle or square means cleaning off but still cutting**. The tooltip says the two things separately ("cleaning off · fast cut on") instead of collapsing them into "no cut"
+- Entering either cutting tier (triangle / square) shows a three-second line above the glyph — "this tier really interrupts generation" — and it disappears when you click elsewhere. There is **no confirm dialog**, but the tier does bite; dragging into those tiers with the colour off warns too
 - Hover for 600 ms brings up the explanation (moving into the tooltip keeps it open, so the star link is clickable), in your system language
-- Keyboard works too: ← → change tier, Space / Enter toggles cleaning
+- Keyboard works too: ← → change the cutting tier only, Space / Enter toggles cleaning only
 
 ---
 

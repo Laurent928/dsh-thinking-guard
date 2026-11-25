@@ -7,7 +7,7 @@
   <a href="package.json"><img alt="Node" src="https://img.shields.io/badge/node-%3E%3D20-60a5fa"></a>
   <a href="package.json"><img alt="DSH" src="https://img.shields.io/badge/DSH-%E2%89%A50.2.0--rc.1-a78bfa"></a>
   <img alt="tests" src="https://img.shields.io/badge/tests-68%20passing-4ade80">
-  <img alt="version" src="https://img.shields.io/badge/version-2.0.1-f59e0b">
+  <img alt="version" src="https://img.shields.io/badge/version-2.0.2-f59e0b">
 </p>
 
 <p align="center">
@@ -185,7 +185,16 @@
 脚本只做四件事：备份 profile 的 `package.json`（有 `pnpm-lock.yaml` 就一起备）、加一行 `link:` 依赖、把包名补进 `dsh.profile.bundles`、在 `node_modules` 里建一个指回本目录的 junction——这步平时是 `pnpm install` 干的，脚本自己做了。
 **不碰会话数据，不联网，不重启你的 DSH**
 
-装错了要退，两步：把备份目录里的 `package.json.bak` 覆盖回 profile、删掉 `node_modules/dsh-thinking-guard`，再重启 DSH。两个路径安装器都会打印出来。
+安装器**顺序是设计过的**：先预检（插件目录、profile 结构、链接位置）→ 备份原清单**字节** → 写临时清单并解析校验 → 建临时 junction 并验证指向 → 旧链接改名备份 → 新链接就位 → 清单就位 → 双向核对。任何一步失败都按反序退回原样；自动回退也失败时，会打印精确的手工恢复路径。
+
+装错了要退，两种情况：
+
+| 原本 | 退法 |
+|---|---|
+| 首次安装（原来没有链接） | 把备份的 `package.json.bak` 复制回 profile，删掉 `node_modules/dsh-thinking-guard`，重启 |
+| 覆盖安装（原来就有链接） | 同上；想连旧链接一起还原，用本脚本重装一遍更省事 |
+
+备份目录和链接路径安装器都会打印出来。
 
 macOS / Linux 走的是另一条路：`install.sh` 要 Node.js + pnpm，跑完得自己在 profile 目录里执行一次 `pnpm install`。
 
@@ -206,9 +215,10 @@ macOS / Linux 走的是另一条路：`install.sh` 要 Node.js + pnpm，跑完�
 - **点一下**：开关颜色，也就是开关「整理历史」——绿＝在工作，灰＝不整理
 - **左右拖**：换形状，也就是换档位（圆 → 三角 → 方），每 18px 一档；拖开时三颗会并排浮出来，直接点那一颗也行
 - **颜色管整理、形状管打断**，两个通道各管一件事，扫一眼就知道它现在在做什么
-- 切到会打断的两档（三角 / 方）时，顶上一行字停 3 秒：「这一档会真的打断生成」，点别处就消失。**没有「确认」对话框**——但它确实会动手
+- **关掉颜色不等于关掉打断**：灰圆＝整理关且不打断；**灰三角 / 灰方块＝整理关，但照样会打断**。悬停文案把两件事分开说（「整理关闭 · 快断开启」），不会含糊成一句「不打断」
+- 切到会打断的两档（三角 / 方）时，顶上一行字停 3 秒：「这一档会真的打断生成」，点别处就消失。**没有「确认」对话框**——但它确实会动手；关着颜色拖到这两档，同样会提示
 - 悬停 600ms 才出说明（移进说明框里不会消失，能把 star 链接点开），**跟随系统语言**（中文环境中文，其余英文）
-- 键盘也能操作：← → 换档，空格 / 回车 开关整理
+- 键盘也能操作：← → 只换打断档位，空格 / 回车 只开关整理
 
 <p align="center">
   <img src="assets/head/how.svg" alt="" width="880">

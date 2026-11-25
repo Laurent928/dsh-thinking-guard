@@ -163,6 +163,54 @@ test('渲染：一颗字形按钮，带可读的档位名', () => {
   assert.ok(hasPop({ children: button.children }), '应挂着 tg-pop 换档动画');
 });
 
+test('关掉整理后的三档：形状照 tier 画，文案分开说（2026-11-25 外部评估）', () => {
+  // 0/3 是「不整理但快断」：宿主真会打断，界面不能画灰圆还说不打断
+  const cases = [
+    { level: 0, tier: 1, shape: 'circle', name: /不打断/ },
+    { level: 0, tier: 2, shape: 'path', name: /慢续/ },
+    { level: 0, tier: 3, shape: 'rect', name: /快断/ },
+  ];
+  for (const c of cases) {
+    let seq = 0;
+    const initials = [c.level, c.tier];
+    const React = {
+      ...makeReact(),
+      useState(initial) {
+        const v = seq < initials.length ? initials[seq] : initial;
+        seq += 1;
+        return [v, () => {}];
+      },
+    };
+    const { exports } = loadViaModuleLoader(React);
+    let render = null;
+    exports.apply({
+      inject(services, fn) {
+        fn({
+          slots: {
+            inject(name, cb) { cb(); },
+            register(meta, r) { render = r; return { dispose() {} }; },
+          },
+        });
+      },
+    });
+    const element = render({ sessionId: 'sess-1' });
+    const node = element.type(element.props);
+    const button = node.children.find((k) => k && k.type === 'button');
+    const findSvg = (n) => {
+      if (!n || typeof n !== 'object') return null;
+      if (n.type === 'svg') return n;
+      const kids = Array.isArray(n.children) ? n.children : (n.children ? [n.children] : []);
+      for (const k of kids) { const hit = findSvg(k); if (hit) return hit; }
+      return null;
+    };
+    const svg = findSvg({ type: 'root', children: button.children });
+    assert.ok(svg, `${c.level}/${c.tier} 应有字形`);
+    assert.equal(svg.children.type, c.shape, `${c.level}/${c.tier} 的形状应按 tier 画`);
+    assert.match(button.props['aria-label'], /整理关闭/, '文案要说清整理是关的');
+    assert.match(button.props['aria-label'], c.name, '文案要说清会不会打断');
+  }
+});
+
 test('四档颜色互不相同，且都是柔化过的低饱和色', () => {
   const block = source.slice(source.indexOf('var LEVELS = ['), source.indexOf('var MAX_LEVEL'));
   const colors = [...block.matchAll(/color: '(#[0-9a-f]{6})'/g)].map((m) => m[1]);

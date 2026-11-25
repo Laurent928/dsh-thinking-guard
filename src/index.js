@@ -567,7 +567,8 @@ export function apply(ctx, config = {}) {
   /** 形状这一维：打断得多狠（颜色关掉时也要能记住 1..3）。 */
   const tierFor = (sid) => {
     const lv = levelFor(sid);
-    return lv >= 1 ? lv : effectiveTier(file, sid, 1);
+    // 形状有自己的记录就用它（0/3 = 不整理但快断），没有记录时才跟着颜色走
+    return effectiveTier(file, sid, Math.max(1, lv));
   };
 
   if (typeof cfg.promptText === 'string' && cfg.promptText.length > 0) {
@@ -691,34 +692,47 @@ export function apply(ctx, config = {}) {
       //    改成克隆一个新的 options 再从 this.streamWithRegistration 发起——
       //    cordis 的 waterfall 会把回调绑到 LlmRuntime 上，所以这里的 this 就是它。
       const scrubOn = readSwitch('scrub') ?? cfg.scrubDegenerateHistory;
+      // ⓪ 分两步：先纯计算（失败就退回原请求），再转发（一旦发起就不再回退）。
+      //    2026-11-25 外部评估：原来 yield* 包在 try 里，转发流中途抛错会被 catch 吞掉，
+      //    然后落回 next() 又跑一遍——上层收到两段输出，原异常丢失。
       if (scrubOn && cleanFor(sid0) && options && typeof options === 'object' && !options[SCRUB_MARK]) {
+        let forwardedOptions = null;
+        let scrubStats = null;
         try {
           const before = options.messages;
           const scrubbed = scrubDegenerateReasoning(before, cfg);
           const changed = (scrubbed.removed > 0 || scrubbed.stripped > 0) && scrubbed.messages !== before;
-          let forwarded = false;
-          if (changed && cfg.scrubStrategy === 'redispatch' && this && typeof this.streamWithRegistration === 'function') {
-            const cloned = { ...options, messages: scrubbed.messages };
-            Object.defineProperty(cloned, SCRUB_MARK, { value: true });
-            let stream = this.streamWithRegistration(cloned);
-            if (stream && typeof stream.then === 'function') stream = await stream;
-            if (stream && typeof stream[Symbol.asyncIterator] === 'function') {
-              trace('历史消毒（转发）：剔掉 ' + scrubbed.stripped + ' 行占位、省略 ' + scrubbed.removed + ' 段');
-              log('从上下文里剔掉 ' + scrubbed.stripped + ' 行占位、省略 ' + scrubbed.removed + ' 段退化思考');
-              yield* stream;
-              return;
-            }
-            trace('历史消毒转发没拿到可迭代的流，退回原地改');
+          if (!changed) {
+            trace('历史消毒：这一轮没有要清的退化块');
+          } else if (cfg.scrubStrategy === 'redispatch' && this && typeof this.streamWithRegistration === 'function') {
+            forwardedOptions = { ...options, messages: scrubbed.messages };
+            Object.defineProperty(forwardedOptions, SCRUB_MARK, { value: true });
+            scrubStats = scrubbed;
+          } else {
+            trace('历史消毒：没有可用的转发入口，本轮不改历史（原地写深冻结对象会抛，已弃用）');
           }
-          if (changed) {
-            options.messages = scrubbed.messages;
-            trace('清掉 ' + scrubbed.removed + ' 段、剔掉 ' + scrubbed.stripped + ' 行（历史消毒·原地改）');
-            log('从上下文里摘掉 ' + scrubbed.removed + ' 段退化思考');
-            forwarded = true;
-          }
-          if (!forwarded && !changed) trace('历史消毒：这一轮没有要清的退化块');
         } catch (error) {
-          trace('历史消毒失败 ' + String(error));
+          trace('历史消毒准备失败，本轮走原请求 ' + String(error));
+          forwardedOptions = null;
+        }
+
+        if (forwardedOptions) {
+          // 从这里开始不许回退：请求可能已经发出去，重发会让上层收到两份流。
+          let stream;
+          try {
+            stream = this.streamWithRegistration(forwardedOptions);
+            if (stream && typeof stream.then === 'function') stream = await stream;
+          } catch (error) {
+            trace('历史消毒转发启动失败，错误原样交给宿主 ' + String(error));
+            throw error;
+          }
+          if (!stream || typeof stream[Symbol.asyncIterator] !== 'function') {
+            throw new TypeError('thinking-guard: 转发拿到的不是异步可迭代的流');
+          }
+          trace('历史消毒（转发）：剔掉 ' + scrubStats.stripped + ' 行占位、省略 ' + scrubStats.removed + ' 段');
+          log('从上下文里剔掉 ' + scrubStats.stripped + ' 行占位、省略 ' + scrubStats.removed + ' 段退化思考');
+          yield* stream;
+          return;
         }
       }
 
@@ -850,9 +864,40 @@ export function apply(ctx, config = {}) {
                   : densityHit
                     ? '占位行太密'
                     : `连着写了 ${run} 行短句`;
+            // 掐之前先确认「掐完能不能接上」：快断看当前请求的工具表，慢续要有 followup。
+            // 两样都确认不了就不掐——白掐一轮还没人接，比不掐更糟（2026-11-25 外部评估）。
+            const readToolList = (list) => {
+              if (Array.isArray(list)) {
+                return list.some((t) => (typeof t === 'string' ? t : (t?.name ?? t?.function?.name)) === cfg.fakeToolName);
+              }
+              if (list && typeof list === 'object') {
+                return Object.prototype.hasOwnProperty.call(list, cfg.fakeToolName);
+              }
+              return null;
+            };
+            // 当前请求带的工具表最权威：它就是「这一步真的能调什么」
+            let fakeToolState = readToolList(options?.tools);
+            if (fakeToolState === null) {
+              const probe = sessionAgents.get(key);
+              for (const list of [probe?.tools, probe?.toolNames, probe?.session?.tools, probe?.session?.toolNames]) {
+                const state = readToolList(list);
+                if (state !== null) { fakeToolState = state; break; }
+              }
+            }
+            const canFast = useFastContinue && fakeToolState === true;
+            const agentRef = sessionAgents.get(key);
+            const canFollow = Boolean(
+              cfg.followupFallback
+              && typeof cfg.afterKillText === 'string' && cfg.afterKillText.length > 0
+              && agentRef && typeof agentRef.followup === 'function',
+            );
+
             if (cfg.streamKillDryRun) {
               log(`[试运行] 该掐了：${why}，已生成 ${chars} 字符`);
-              trace(`试运行命中 ${why} chars=${chars}`);
+              trace(`试运行命中 ${why} chars=${chars}，快断=${canFast} 慢续=${canFollow}`);
+              tail = '';
+            } else if (!canFast && !canFollow) {
+              trace(`掐了也没人接（${cfg.fakeToolName} ${fakeToolState === false ? '不在工具表' : '未确认'}，followup 不可用），放行本次生成；原因 ${why}`);
               tail = '';
             } else {
               killed = true;
@@ -862,26 +907,6 @@ export function apply(ctx, config = {}) {
               recordKill(key);
               const hint = buildCompensation(recentLines, cfg);
               if (hint) trace("掐断补偿：" + hint.length + " 字（原文不入日志）");
-
-              // 伪造之前先看一眼这个会话有没有那个工具：子代理、自定义预设可能没有 get_goal。
-              // 探不到工具表就维持原行为（不动成功路径）；明确探到「没有」才退回慢速续轮。
-              const fakeToolState = (() => {
-                const ref = sessionAgents.get(key);
-                const lists = [ref?.tools, ref?.toolNames, ref?.session?.tools, ref?.session?.toolNames];
-                for (const list of lists) {
-                  if (Array.isArray(list)) {
-                    return list.some((t) => (typeof t === 'string' ? t : t?.name) === cfg.fakeToolName);
-                  }
-                  if (list && typeof list === 'object') {
-                    return Object.prototype.hasOwnProperty.call(list, cfg.fakeToolName);
-                  }
-                }
-                return null;
-              })();
-              const canFast = useFastContinue && fakeToolState !== false;
-              if (useFastContinue && fakeToolState === false) {
-                trace(`这个会话里没有 ${cfg.fakeToolName}，退回慢速续轮`);
-              }
 
               // 快速续轮：伪造一个只读工具调用，把 finish 改成 tool-calls。
               // 这一轮于是不会结束，直接进下一步（延迟 <1s），下一步的 pre-step 再注入提示。
@@ -903,7 +928,6 @@ export function apply(ctx, config = {}) {
               // 慢速续轮（兜底）：用 followup 投一条消息，等 turn 收尾后自己起新的一轮。
               let continued = false;
               if (cfg.followupFallback && cfg.afterKillText.length > 0) {
-                const agentRef = sessionAgents.get(key);
                 if (agentRef && typeof agentRef.followup === 'function') {
                   try {
                     const followText = String(cfg.afterKillText).replace(/\{reason\}/g, whyText);
@@ -950,7 +974,7 @@ export function apply(ctx, config = {}) {
           return sendJson(res, 200, {
             ok: true,
             level: effective.level,
-            tier: effective.level >= 1 ? effective.level : effectiveTier(file, sid, 1),
+            tier: effectiveTier(file, sid, Math.max(1, effective.level)),
             scope: effective.scope,
             global: readGlobal(file) ?? null,
             max: MAX_LEVEL,
@@ -980,8 +1004,8 @@ export function apply(ctx, config = {}) {
           if (!Number.isInteger(level) || level < 0 || level > MAX_LEVEL) {
             return sendJson(res, 400, { ok: false, error: 'level 必须是 0..' + MAX_LEVEL + ' 的整数' });
           }
-          // 形状档位：不传就跟着 level 走（level>=1 时两者一致）
-          const rawTier = body?.tier === undefined ? level : Number(body.tier);
+          // 形状档位：不传就跟着 level 走（level 0 归一到 1——灰圆＝两项都关）
+          const rawTier = body?.tier === undefined ? Math.max(1, level) : Number(body.tier);
           if (!Number.isInteger(rawTier) || rawTier < 1 || rawTier > 3) {
             return sendJson(res, 400, { ok: false, error: 'tier 必须是 1..3 的整数' });
           }

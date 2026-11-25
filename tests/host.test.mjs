@@ -333,7 +333,7 @@ test('流内掐断：强度 3 下连续短行超阈值就提前收手', async ()
   const chunks = Array.from({ length: 40 }, () => ({ type: 'reasoning-delta', text: '做。\n' }));
   const next = async function* () { for (const c of chunks) yield c; };
   const out = [];
-  for await (const c of handlers[0]({ sessionId: 'stream-kill-hit' }, next)) out.push(c);
+  for await (const c of handlers[0]({ sessionId: 'stream-kill-hit', tools: [{ name: 'get_goal' }] }, next)) out.push(c);
 
   assert.ok(out.length < 25, `应提前结束，实际产出 ${out.length} 个 chunk`);
   assert.ok(out.length >= 10, `至少要放行到接近阈值，实际 ${out.length}`);
@@ -347,7 +347,7 @@ test('流内掐断：强度不够时原样透传', async () => {
   const chunks = Array.from({ length: 40 }, () => ({ type: 'reasoning-delta', text: '做。\n' }));
   const next = async function* () { for (const c of chunks) yield c; };
   const out = [];
-  for await (const c of handler({ sessionId: 'stream-kill-off' }, next)) out.push(c);
+  for await (const c of handler({ sessionId: 'stream-kill-off', tools: [{ name: 'get_goal' }] }, next)) out.push(c);
   assert.equal(out.length, 40, '强度 2 不该掐');
 });
 
@@ -360,7 +360,7 @@ test('流内掐断：试运行只记日志不真掐', async () => {
   const chunks = Array.from({ length: 40 }, () => ({ type: 'reasoning-delta', text: '做。\n' }));
   const next = async function* () { for (const c of chunks) yield c; };
   const out = [];
-  for await (const c of handler({ sessionId: 'stream-kill-dry' }, next)) out.push(c);
+  for await (const c of handler({ sessionId: 'stream-kill-dry', tools: [{ name: 'get_goal' }] }, next)) out.push(c);
   assert.equal(out.length, 40, '试运行不该掐断流');
   assert.ok(ctx.logs.some(l => l.includes('试运行')), '试运行应留下日志');
 });
@@ -375,7 +375,7 @@ test('掐流之后，下一步会收到一次「被截断」提示，且只提�
   const chunks = Array.from({ length: 40 }, () => ({ type: 'reasoning-delta', text: '做。\n' }));
   const next = async function* () { for (const c of chunks) yield c; };
   let killed = 0;
-  for await (const c of streamHandler({ sessionId: 'kill-notice' }, next)) killed++;
+  for await (const c of streamHandler({ sessionId: 'kill-notice', tools: [{ name: 'get_goal' }] }, next)) killed++;
 
   const payload = { agent: { session: { id: 'kill-notice', ownEvents: () => [] } }, messages: [] };
   const first = await waterfall(ctx, 'agent/pre-step', payload, { kind: 'enter', messages: [] });
@@ -396,7 +396,7 @@ test('连续掐断到上限就自动停手，防止死循环', async () => {
     const chunks = Array.from({ length: 40 }, () => ({ type: 'reasoning-delta', text: '做。\n' }));
     const next = async function* () { for (const c of chunks) yield c; };
     const out = [];
-    for await (const c of handler({ sessionId: 'kill-streak' }, next)) out.push(c);
+    for await (const c of handler({ sessionId: 'kill-streak', tools: [{ name: 'get_goal' }] }, next)) out.push(c);
     return out.length;
   };
   const first = await feed();
@@ -418,7 +418,7 @@ test('思考没超过字符下限就不掐——短步骤哪怕刷短行也放�
   const chunks = Array.from({ length: 40 }, () => ({ type: 'reasoning-delta', text: '做。\n' }));
   const next = async function* () { for (const c of chunks) yield c; };
   const out = [];
-  for await (const c of handler({ sessionId: 'kill-floor' }, next)) out.push(c);
+  for await (const c of handler({ sessionId: 'kill-floor', tools: [{ name: 'get_goal' }] }, next)) out.push(c);
   assert.equal(out.length, 40, '字符数不够下限时不掐');
 });
 
@@ -448,7 +448,7 @@ test('测试钩子必须绑会话：不指定就拒绝，指定了只作用那�
     const chunks = Array.from({ length: 40 }, () => ({ type: 'reasoning-delta', text: '做。\n' }));
     const next = async function* () { for (const c of chunks) yield c; };
     const out = [];
-    for await (const c of handler({ sessionId: sid }, next)) out.push(c);
+    for await (const c of handler({ sessionId: sid, tools: [{ name: 'get_goal' }] }, next)) out.push(c);
     return out.length;
   };
 
@@ -483,7 +483,7 @@ test('掐断后用 followup 自动续一轮（自己构造消息，不依赖模�
   const handler = ctx.handlers.get('llm/stream')[0];
   const chunks = Array.from({ length: 40 }, () => ({ type: 'reasoning-delta', text: '做。\n' }));
   const next = async function* () { for (const c of chunks) yield c; };
-  for await (const c of handler({ sessionId: 'auto-continue' }, next)) { /* 消费 */ }
+  for await (const c of handler({ sessionId: 'auto-continue', tools: [{ name: 'get_goal' }] }, next)) { /* 消费 */ }
 
   assert.equal(followups.length, 1, '掐断后应投递一条 followup');
   const msg = followups[0];
@@ -519,7 +519,7 @@ test('快速续轮：伪造一个只读工具调用，把 finish 改成 tool-cal
   const chunks = Array.from({ length: 40 }, () => ({ type: 'reasoning-delta', index: 0, text: '做。\n' }));
   const next = async function* () { for (const c of chunks) yield c; };
   const out = [];
-  for await (const c of handler({ sessionId: 'fast-continue' }, next)) out.push(c);
+  for await (const c of handler({ sessionId: 'fast-continue', tools: [{ name: 'get_goal' }] }, next)) out.push(c);
 
   const finish = out.find(c => c.type === 'finish');
   assert.ok(finish, '必须补一个 finish');
@@ -615,7 +615,7 @@ test('重复对判据：好。⏎做。 反复就掐，不等连续短行', asyn
   for (let i = 0; i < 60; i++) chunks.push({ type: 'reasoning-delta', text: i % 2 ? '好。\n' : '做。\n' });
   const next = async function* () { for (const c of chunks) yield c; };
   const out = [];
-  for await (const c of handler({ sessionId: 'repeat-kill' }, next)) out.push(c);
+  for await (const c of handler({ sessionId: 'repeat-kill', tools: [{ name: 'get_goal' }] }, next)) out.push(c);
   assert.ok(out.length < 55, `应提前掐断，实际放行 ${out.length} 个 chunk`);
   assert.ok(ctx.logs.some((l) => l.includes('重复对')), '日志应写明是重复对命中');
 });
@@ -633,7 +633,7 @@ test('风格性填充不掐：长内容里散着插「好。/嗯。」', async (
   }
   const next = async function* () { for (const c of chunks) yield c; };
   const out = [];
-  for await (const c of handler({ sessionId: 'style-filler' }, next)) out.push(c);
+  for await (const c of handler({ sessionId: 'style-filler', tools: [{ name: 'get_goal' }] }, next)) out.push(c);
   assert.equal(out.length, chunks.length, '散插的填充行不该被掐');
 });
 
@@ -651,7 +651,7 @@ test('冷却：同一会话连掐 3 次后第 4 次整段放行', async () => {
     const chunks = Array.from({ length: 40 }, () => ({ type: 'reasoning-delta', text: '做。\n' }));
     const next = async function* () { for (const c of chunks) yield c; };
     const out = [];
-    for await (const c of handler({ sessionId: 'cooldown-test' }, next)) out.push(c);
+    for await (const c of handler({ sessionId: 'cooldown-test', tools: [{ name: 'get_goal' }] }, next)) out.push(c);
     return out.length;
   };
   for (let i = 0; i < 3; i++) assert.ok((await feed()) < 25, `第 ${i + 1} 次应被掐`);
@@ -671,7 +671,7 @@ test('掐断补偿：注入里带上被掐掉那段的最后几句真实内容',
   ];
   for (let i = 0; i < 40; i++) chunks.push({ type: 'reasoning-delta', text: '做。\n' });
   const next = async function* () { for (const c of chunks) yield c; };
-  for await (const c of handler({ sessionId: 'compensate' }, next)) void c;
+  for await (const c of handler({ sessionId: 'compensate', tools: [{ name: 'get_goal' }] }, next)) void c;
 
   const payload = { agent: { session: { id: 'compensate', ownEvents: () => [] } }, messages: [] };
   const step = await waterfall(ctx, 'agent/pre-step', payload, { kind: 'enter', messages: [] });
@@ -751,7 +751,7 @@ test('英文判据接进流内：Let me 循环会被掐', async () => {
   for (let i = 0; i < 90; i++) chunks.push({ type: 'reasoning-delta', text: `Let me ${verbs[i % verbs.length]}. ` });
   const next = async function* () { for (const c of chunks) yield c; };
   const out = [];
-  for await (const c of handler({ sessionId: 'english-kill' }, next)) out.push(c);
+  for await (const c of handler({ sessionId: 'english-kill', tools: [{ name: 'get_goal' }] }, next)) out.push(c);
   assert.ok(out.length < 90, `应提前掐断，实际放行 ${out.length}`);
   assert.ok(ctx.logs.some((l) => l.includes('英文重复')), '日志应写明是英文重复命中');
 });
@@ -791,7 +791,7 @@ test('英文判据不掐「写目录」的流（同一份 fixture 走流内）',
   for (let i = 0; i < 90; i++) chunks.push({ type: 'reasoning-delta', text: `${line}\n` });
   const next = async function* () { for (const c of chunks) yield c; };
   let seen = 0;
-  for await (const _ of handler({ sessionId: 'english-nav' }, next)) seen += 1;
+  for await (const _ of handler({ sessionId: 'english-nav', tools: [{ name: 'get_goal' }] }, next)) seen += 1;
   assert.equal(seen, 90, `链接清单不该被掐，实际只放行 ${seen}`);
 });
 
@@ -858,6 +858,76 @@ test('历史消毒用转发式：深冻结的 options 也能把改过的消息�
   assert.ok(text.includes('先看 docs 目录。'), '正文保留');
   assert.equal(out.length, 1, '转发回来的流原样吐给上游');
   assert.equal(options.messages.length, 1, '原件没被就地改');
+});
+
+test('转发流中途抛错不重发原请求（2026-11-25 外部评估 P0）', async () => {
+  const file = path.join(HOME, 'thinking-guard.json');
+  writeSessionLevel(file, 'scrub-throw', 1);
+  const ctx = makeCtx();
+  apply(ctx, { level: 1, scrubDegenerateHistory: true, scrubMode: 'strip', scrubStripMinDropped: 5 });
+  const handler = ctx.handlers.get('llm/stream')[0];
+
+  const dirty = ['内容一。', '好。', '内容二。', '嗯。', '做。', '内容三。', '好。', '嗯。', '好。', '做。', '内容四。'].join('\n');
+  const options = Object.freeze({
+    sessionId: 'scrub-throw',
+    messages: Object.freeze([Object.freeze({ role: 'assistant', content: Object.freeze([Object.freeze({ type: 'reasoning', text: dirty })]) })]),
+  });
+  const fakeRuntime = {
+    calls: 0,
+    streamWithRegistration() {
+      this.calls += 1;
+      return (async function* () {
+        yield { type: 'reasoning-delta', text: '半截' };
+        throw new Error('adapter 炸了');
+      })();
+    },
+  };
+  let nextCalls = 0;
+  const next = async function* () { nextCalls += 1; yield { type: 'reasoning-delta', text: '原请求' }; };
+
+  const seen = [];
+  await assert.rejects(async () => {
+    for await (const c of handler.call(fakeRuntime, options, next)) seen.push(c);
+  }, /adapter 炸了/);
+
+  assert.equal(fakeRuntime.calls, 1, '转发只发起一次');
+  assert.equal(nextCalls, 0, '绝不能回头再跑原请求（那就是两份输出）');
+  assert.equal(seen.length, 1, '已经吐出去的那帧保留，但不会再来一份');
+});
+
+test('转发入口同步抛错时也不回退原请求', async () => {
+  const file = path.join(HOME, 'thinking-guard.json');
+  writeSessionLevel(file, 'scrub-throw2', 1);
+  const ctx = makeCtx();
+  apply(ctx, { level: 1, scrubDegenerateHistory: true, scrubMode: 'strip', scrubStripMinDropped: 5 });
+  const handler = ctx.handlers.get('llm/stream')[0];
+
+  const dirty = ['内容一。', '好。', '内容二。', '嗯。', '做。', '内容三。', '好。', '嗯。', '好。', '做。', '内容四。'].join('\n');
+  const options = Object.freeze({ sessionId: 'scrub-throw2', messages: [{ role: 'assistant', content: [{ type: 'reasoning', text: dirty }] }] });
+  const fakeRuntime = { calls: 0, streamWithRegistration() { this.calls += 1; throw new Error('入口炸了'); } };
+  let nextCalls = 0;
+  const next = async function* () { nextCalls += 1; yield { type: 'reasoning-delta', text: '原请求' }; };
+
+  await assert.rejects(async () => {
+    for await (const _ of handler.call(fakeRuntime, options, next)) void _;
+  }, /入口炸了/);
+  assert.equal(fakeRuntime.calls, 1);
+  assert.equal(nextCalls, 0, '启动阶段的错误也要抛给宿主，不许重发');
+});
+
+test('工具表里没有 get_goal 时不做快断（2026-11-25 外部评估 P1）', async () => {
+  const file = path.join(HOME, 'thinking-guard.json');
+  writeSessionLevel(file, 'no-fake-tool', 3);
+  const ctx = makeCtx();
+  apply(ctx, { level: 3, streamKillRun: 15, streamKillMinChars: 0, followupFallback: false });
+  const handler = ctx.handlers.get('llm/stream')[0];
+  const chunks = Array.from({ length: 40 }, () => ({ type: 'reasoning-delta', text: '做。\n' }));
+  const next = async function* () { for (const c of chunks) yield c; };
+  const out = [];
+  // 请求只带 read 工具，agent 也没有 followup：既不能快断也不能慢续
+  for await (const c of handler({ sessionId: 'no-fake-tool', tools: [{ name: 'read' }] }, next)) out.push(c);
+  assert.equal(out.length, 40, '接不上就别掐，整段放行');
+  assert.ok(!out.some((c) => c.type === 'tool-call-delta'), '不该伪造任何工具调用');
 });
 
 test('转发过的新 options 不会二次消毒（防无限重发）', async () => {
