@@ -81,5 +81,5 @@
   <text x="640" y="336" text-anchor="middle" class="hookEn">It is not thinking. It is stuck.</text>
   <text x="640" y="380" text-anchor="middle" class="claim">首发 · 全网首个「只摘填充、保留正文」的思考消毒方案</text>
   <text x="640" y="408" text-anchor="middle" class="claimEn">First line-level cleaner: drop the filler, keep every sentence</text>
-  <text x="640" y="440" text-anchor="middle" class="stat">602 / 686 行复读同一句 · 最烂那批块也留 66%，整块替换只剩 2% · v2.0.3</text>
+  <text x="640" y="440" text-anchor="middle" class="stat">686 行里 602 行在复读 · 全库 99.8% 原样留下，最烂那批 66% 对 2%</text>
 </svg>
