@@ -7,7 +7,7 @@
   <a href="package.json"><img alt="Node" src="https://img.shields.io/badge/node-%3E%3D20-60a5fa"></a>
   <a href="package.json"><img alt="DSH" src="https://img.shields.io/badge/DSH-%E2%89%A50.2.0--rc.1-a78bfa"></a>
   <img alt="tests" src="https://img.shields.io/badge/tests-68%20passing-4ade80">
-  <img alt="version" src="https://img.shields.io/badge/version-2.0.0-f59e0b">
+  <img alt="version" src="https://img.shields.io/badge/version-2.0.1-f59e0b">
 </p>
 
 <p align="center">
@@ -257,6 +257,8 @@ macOS / Linux 走的是另一条路：`install.sh` 要 Node.js + pnpm，跑完�
 
 - 想关掉：`scrubDegenerateHistory: false`；想退回整块省略：`scrubMode: 'squash'`
 
+> **兼容性提醒**：转发等于把整条 `llm/stream` waterfall 重跑一遍——链上其他中间件（重试、计数、别的改写插件）会**第二次**生效。本机目前没有别的 `llm/stream` 中间件，所以没出问题；你要是装了同类插件就得留意它们的幂等性。这条来自外部评估，暂时只写在这里、不改代码。
+
 > 省下来的 token 不多（全库 17,386 块平均只剥 0.28% 的字符）。它值钱的地方是切断「模型看到自己写过填充行 → 下一轮照着写」的自我强化链，不是省字数
 
 ### 那为什么不是直接把推理等级调低
@@ -289,13 +291,15 @@ macOS / Linux 走的是另一条路：`install.sh` 要 Node.js + pnpm，跑完�
 
 两套判据，分别管「这一轮要不要停」和「这一块算不算烂」。
 
-**流内判据（决定掐不掐）**，v0.3.0 起以重复对为主：
+**流内判据（决定掐不掐）**：
 
 | 条件 | 说明 |
 |---|---|
-| 同一对相邻行重复 ≥ `streamKillRepeatMin`（默认 8）**且** 占位行 ≥ `streamKillRepeatRatioMin`（默认 15%） | 主判据。真死循环的形状就是「好。→做。」反复，而风格性填充涨不上去 |
-| 或 尾部连续 1–6 字短行 ≥ `streamKillRun`（默认 15）且思考 ≥ `streamKillMinChars`（默认 150） | 老判据，留着兜长连跑 |
+| 尾部连续 1–6 字短行 ≥ `streamKillRun`（默认 15）且思考 ≥ `streamKillMinChars`（默认 150） | **真机上真正在干活的判据**——本机两天的 26 次掐断里，14 次是它 |
+| 或 同一对相邻行重复 ≥ `streamKillRepeatMin`（默认 8）**且** 占位行 ≥ `streamKillRepeatRatioMin`（默认 15%） | 设计时当成主力，实机上**两天 0 命中**：真正的死循环很少能凑够 20 行还被这条逮住，现在当补充 |
 | 块内少于 `streamKillRepeatMinLines`（默认 20）行 | 不看重复对 |
+
+> 这条差别不藏着：设计时以为相邻对是主力，跑了两天才知道动手的是连续短行。而真正治本的是历史消毒——同一段时间它转发 **126 次**，比掐流多一个数量级。
 
 **块级判据（pre-step 用，判断这一块整块烂不烂）**：
 
@@ -316,7 +320,11 @@ macOS / Linux 走的是另一条路：`install.sh` 要 Node.js + pnpm，跑完�
 | 条件 | 说明 |
 |---|---|
 | 同一句（归一化后）占全部句子的比例 ≥ `englishDupRatioMin`（默认 0.30）且句数 ≥ `englishMinSentences`（默认 12） | 整句反复 |
-| 或 句首 4 个词重复 ≥ `englishGramMin`（默认 10）且句数 ≥ `englishGramMinSentences`（默认 20） | 抓 `Let me …` 这种同构句 |
+| 或 句首 4 个词重复 ≥ `englishGramMin`（默认 10）且句数 ≥ `englishGramMinSentences`（默认 20）**且这些同构句占全部句子 ≥ `englishGramRatioMin`（默认 0.10）** | 抓 `Let me …` 这种同构句；最后那条占比是防「长块里逐条列举」被误判 |
+
+而且**算之前先把结构性文本剔掉**：围栏代码块、含 `href=` / `http` 的行、纯 HTML 标签行、40 字以内的列表项。
+
+这一条是 2026-11-25 补的。那天模型在思考里写 README 的导航条，十几行指向站内锚点的 `<a href>` 归一化之后彼此相同，被判成「同一句占 32%」——**那不是空转，是写目录**。现在已经拿那段原文做了 fixture（`tests/host.test.mjs` 里两条），全库 10,092 个英文思考块重跑 **0 误报**。
 
 阈值是在那 4504 个真实英文块上定的：句重复占比 99 分位 0.10、最大 0.267；句首 4 词最多重复 9 次（那一块在反复念文件路径）。取 0.30 / 10 次，本语料**零误报**。**召回未验证**——我们的语料里一个英文空转样本都没有，抓不抓得到只有别人遇到才知道。
 
@@ -471,6 +479,7 @@ profile patch 里可覆盖任意一项
 | `englishMinSentences` | `12` | 至少这么多句才看句重复 |
 | `englishGramMin` | `10` | 句首 4 个词最多重复这么多次就判 |
 | `englishGramMinSentences` | `20` | 至少这么多句才看 4 词重复 |
+| `englishGramRatioMin` | `0.10` | 这些同构句还得占全部句子这么多比例才算退化——长块里的逐条列举不能算 |
 | `streamKillDensityEnabled` | `false` | 密度判据（按**行数**算占比）。**2026-11-24 夜默认关**：一行「做。」只有 2 个字，26% 的行只占 3% 的字——真机上 21 分钟砍了 11 次正常思考，全库看它单独多抓 199 块、真死循环 0 块 |
 | `streamKillDensityMinLines` | `30` | 至少这么多行才看密度（该判据已默认关） |
 | `streamKillDensityRatio` | `0.25` | 占位行占比达到这个值就判（已默认关，留作对照） |

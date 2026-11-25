@@ -745,13 +745,54 @@ test('英文判据接进流内：Let me 循环会被掐', async () => {
   });
   const handler = ctx.handlers.get('llm/stream')[0];
   const verbs = ['check it', 'run the build', 'write the file'];
+  // 90 段：采样点在 deltaCount 的 20/40/60/80。缓冲 600 字以后才采样，
+  // 现在要连续两次采样都超阈才判（半截缓冲会抖），所以要给够两轮。
   const chunks = [];
-  for (let i = 0; i < 50; i++) chunks.push({ type: 'reasoning-delta', text: `Let me ${verbs[i % verbs.length]}. ` });
+  for (let i = 0; i < 90; i++) chunks.push({ type: 'reasoning-delta', text: `Let me ${verbs[i % verbs.length]}. ` });
   const next = async function* () { for (const c of chunks) yield c; };
   const out = [];
   for await (const c of handler({ sessionId: 'english-kill' }, next)) out.push(c);
-  assert.ok(out.length < 50, `应提前掐断，实际放行 ${out.length}`);
+  assert.ok(out.length < 90, `应提前掐断，实际放行 ${out.length}`);
   assert.ok(ctx.logs.some((l) => l.includes('英文重复')), '日志应写明是英文重复命中');
+});
+
+test('英文判据不把「写目录 / 链接清单」当成空转（2026-11-25 误伤 fixture）', async () => {
+  const { englishMetrics, isEnglishDegenerate, stripStructuralLines } = await import('../src/index.js');
+  const nav = [
+    '<a href="#-the-symptom">Symptom</a> ·',
+    '<a href="#-background-how-this-came-about">Background</a> ·',
+    '<a href="#-what-it-does">What it does</a> ·',
+    '<a href="#-install">Install</a> ·',
+    '<a href="#-the-glyph">Tiers</a> ·',
+    '<a href="#-why-it-works">Why</a> ·',
+    '<a href="#-configuration">Config</a>',
+  ].join('\n');
+  const text = Array(8).fill(nav).join('\n');
+  const metrics = englishMetrics(text);
+  assert.equal(isEnglishDegenerate(metrics, {}), false, '八遍导航条也不该判退化——那是结构性重复');
+  assert.ok(metrics.sentences < 12, `剔掉链接行后句子数应很少，实际 ${metrics.sentences}`);
+  assert.equal(stripStructuralLines(text).trim(), '', '链接行应被整行剔掉');
+  // 反向对照：同样的词换成散文句式，仍要能抓到
+  const prose = Array(20).fill('Let me check the symptom background and what it does first.').join(' ');
+  assert.equal(isEnglishDegenerate(englishMetrics(prose), {}), true, '散文里的同句重复仍要判退化');
+});
+
+test('英文判据不掐「写目录」的流（同一份 fixture 走流内）', async () => {
+  const file = path.join(HOME, 'thinking-guard.json');
+  writeSessionLevel(file, 'english-nav', 3);
+  const ctx = makeCtx();
+  apply(ctx, {
+    level: 3, streamKillRun: 999, streamKillMinChars: 0, maxKillStreak: 0,
+    streamKillEnglishEnabled: true, streamKillRepeatEnabled: false,
+  });
+  const handler = ctx.handlers.get('llm/stream')[0];
+  const line = '<a href="#-what-it-does">What it does</a> ·';
+  const chunks = [];
+  for (let i = 0; i < 90; i++) chunks.push({ type: 'reasoning-delta', text: `${line}\n` });
+  const next = async function* () { for (const c of chunks) yield c; };
+  let seen = 0;
+  for await (const _ of handler({ sessionId: 'english-nav' }, next)) seen += 1;
+  assert.equal(seen, 90, `链接清单不该被掐，实际只放行 ${seen}`);
 });
 
 // ---------- 2026-11-24 深夜：历史消毒改成「剔占位行 + 转发式重发」 ----------

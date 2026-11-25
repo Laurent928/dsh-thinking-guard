@@ -7,7 +7,7 @@
   <a href="package.json"><img alt="Node" src="https://img.shields.io/badge/node-%3E%3D20-60a5fa"></a>
   <a href="package.json"><img alt="DSH" src="https://img.shields.io/badge/DSH-%E2%89%A50.2.0--rc.1-a78bfa"></a>
   <img alt="tests" src="https://img.shields.io/badge/tests-68%20passing-4ade80">
-  <img alt="version" src="https://img.shields.io/badge/version-2.0.0-f59e0b">
+  <img alt="version" src="https://img.shields.io/badge/version-2.0.1-f59e0b">
 </p>
 
 <p align="center">
@@ -278,6 +278,8 @@ Reasoning blocks only; text and tool calls are untouched. The session log keeps 
 
 **How the rewrite reaches the wire.** `options` is deep-frozen, so assigning to `options.messages` throws. That is exactly how earlier versions failed silently — the trace log showed zero successes and zero failures, meaning the whole mechanism had never run. The plugin now clones the options object and re-issues the call through `this.streamWithRegistration()`. Cordis binds waterfall listeners to the LlmRuntime instance, so `this` inside the middleware is exactly what is needed. The clone carries `Symbol.for('dsh.thinking-guard.scrubbed')` so it is never sanitized twice and never re-sent in a loop.
 
+> **Compatibility note**: re-issuing the call replays the whole `llm/stream` waterfall, so any other middleware on that chain (retry, counters, other rewriting plugins) runs a **second** time. There is no other `llm/stream` middleware on this machine, so nothing broke here. If you run one, check that it is idempotent. Raised by an external review; documented rather than fixed for now.
+
 - To turn it off: `scrubDegenerateHistory: false`, or flip the runtime switch (see below)
 - To go back to whole-block replacement: `scrubMode: 'squash'`
 
@@ -305,13 +307,15 @@ So the plugin leaves you alone by default, and only moves at that moment
 
 Two sets of criteria: one decides whether this turn should be stopped, the other decides whether a finished block is rotten.
 
-**Mid-stream (decides the cut)** — adjacent pairs have been the main signal since v0.3.0:
+**Mid-stream (decides the cut)**:
 
 | Condition | Meaning |
 |---|---|
-| one adjacent line pair repeating ≥ `streamKillRepeatMin` (8) **and** filler lines ≥ `streamKillRepeatRatioMin` (15%) | the main detector. A real loop is 「好。→做。」 over and over, and stylistic filler never climbs that high |
-| or trailing 1–6 character lines ≥ `streamKillRun` (15), with ≥ `streamKillMinChars` (150) characters written | the older rule, kept for long runs |
+| trailing 1–6 character lines ≥ `streamKillRun` (15), with ≥ `streamKillMinChars` (150) characters written | **the rule that actually fires on live traffic** — 14 of 26 cuts in two days |
+| or one adjacent line pair repeating ≥ `streamKillRepeatMin` (8) **and** filler lines ≥ `streamKillRepeatRatioMin` (15%) | pitched as the main detector, it has **never fired in two days**: a real loop rarely reaches 20 lines and slips past it. Kept as a supplement |
 | blocks under `streamKillRepeatMinLines` (20) lines | adjacent pairs are not counted |
+
+> Not hiding the gap: the design called adjacent pairs the main signal; two days of traffic say the trailing-short-line rule is what moves. The real work is done by the history scrub — it forwards **126 times** over the same period, an order of magnitude more than cutting.
 
 **Block-level (used at pre-step, judges a finished block)**:
 
@@ -332,7 +336,11 @@ The two scales differ on purpose: below ten lines a share means nothing, while m
 | Condition | Meaning |
 |---|---|
 | one sentence (normalised) covering ≥ `englishDupRatioMin` (0.30) of all sentences, with ≥ `englishMinSentences` (12) sentences | whole sentences repeating |
-| or the same first four words repeating ≥ `englishGramMin` (10) times, with ≥ `englishGramMinSentences` (20) sentences | catches `Let me …` clones |
+| or the same first four words repeating ≥ `englishGramMin` (10) times, with ≥ `englishGramMinSentences` (20) sentences, **and those clones making up ≥ `englishGramRatioMin` (0.10) of all sentences** | catches `Let me …` clones; the share test keeps a long checklist from looking degenerate |
+
+And the metrics run on **prose only**: fenced code, lines with `href=` / `http`, bare HTML tag lines and list items under 40 characters are stripped first.
+
+That last part was added 2026-11-25. The model was writing a README nav — a dozen `<a href>` lines pointing at in-page anchors — which normalise to the same sentence, so it scored 32% and got cut. **That is authoring a table of contents, not looping.** The original text is now a fixture in `tests/host.test.mjs`, and a rerun over 10,092 English blocks gives **zero false positives**.
 
 Those thresholds come from those 4,504 real English blocks: duplicate-sentence share p99 0.10, max 0.267; the most repeated four-word opener appeared 9 times (a block re-reading a file path). At 0.30 / 10, **zero false positives** on our corpus. **Recall is unverified** — there is not a single real English loop sample in our data, so only someone who hits one can tell us.
 
@@ -494,6 +502,7 @@ Any key can be overridden from the profile patch
 | `englishMinSentences` | `12` | Minimum sentence count before the duplicate rule applies |
 | `englishGramMin` | `10` | Judge degenerate when the same first four words repeat this many times |
 | `englishGramMinSentences` | `20` | Minimum sentence count before the four-word rule applies |
+| `englishGramRatioMin` | `0.10` | Those clones must also cover this share of all sentences — a long checklist must not look degenerate |
 | `streamKillDensityEnabled` | `false` | Density detector (filler lines as a share of **lines**). Off by default: a 「做。」 line is 2 characters, so 26% of lines was only 3% of characters — on live traffic it cut 11 normal thoughts in 21 minutes |
 | `cooldownWindowMs` | `600000` | Cooldown window per session |
 | `cooldownHits` | `3` | Cuts inside the window before cooling down |

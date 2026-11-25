@@ -40,8 +40,8 @@ export const MAX_LEVEL = 3;
 
 /**
  * 默认配置。profile 的 patch 可以覆盖任意一项。
- * 默认 2（慢断）——2026-11-24 阿丞定的：装完就该有效果，不指望用户自己往上拖。
- * 代价是这一步会砍掉生成、再 followup 续一轮（7–21 秒）；只想要提示就把档位调到 1。
+ * level 默认 1（整理）：只做无损剥离，一次都不打断。
+ * 2026-11-25 起默认从 2（慢断）降回 1——默认档不该把生成砍掉，见 CHANGELOG 2.0.0。
  */
 const DEFAULTS = {
   level: 1,
@@ -123,6 +123,8 @@ const DEFAULTS = {
   englishGramMin: 10,
   /** 至少这么多句才看 4 词重复。 */
   englishGramMinSentences: 20,
+  /** 同一 4 词开头要占全部句子这么多比例才算退化：长块里的逐条列举不能算。 */
+  englishGramRatioMin: 0.10,
   /**
    * 冷却：同一会话在 cooldownWindowMs 内被掐到 cooldownHits 次，就歇 cooldownMs 再掐。
    *
@@ -160,7 +162,7 @@ const DEFAULTS = {
    */
   scrubStrategy: 'redispatch',
   /** 被掐断后，下一步给模型的一句提示（空字符串 = 不提示）。 */
-  afterKillText: '你上一步在思考里重复写「做。/好。」被截断了，那条思路没走完。别重新推一遍，直接做你上一步已经决定的事。',
+  afterKillText: '你上一步的思考因为{reason}被截断了，那条思路没走完。别重新推一遍，直接做你上一步已经决定的事。',
   /** 连续掐断太多次就先停手，免得陷入「掐→重想→再掐」的死循环（0 = 不限）。 */
   maxKillStreak: 3,
   /**
@@ -211,8 +213,36 @@ function normalizeEnglish(text) {
  * @param text - 思考原文。
  * @returns 句数、最高重复句的占比、句首 4 词的最高重复次数与那个短语。
  */
+/**
+ * 英文句级判据只看「散文」：先剔掉那些**天生就重复**的结构性文本。
+ *
+ * 2026-11-25 18:08 的误伤现场：模型在思考里写 README 的导航条，
+ * 十几行 `<a href="#-…">…</a>` 归一化之后彼此相同，被判成「同一句占 32%」——
+ * 那不是空转，是写目录。所以代码块、链接、纯标签行、短列表项一律不算句子。
+ * @param text - 思考原文。
+ * @returns 只剩散文句的文本（结构性行被换成空行，句子切分不变）。
+ */
+export function stripStructuralLines(text) {
+  let src = String(text ?? '');
+  // 围栏代码块整块扔掉：奇数段就是被 ``` 包住的内容
+  src = src.split('```').map((seg, i) => (i % 2 === 1 ? '' : seg)).join('');
+  const kept = [];
+  for (const raw of src.split('\n')) {
+    const line = raw.trim();
+    if (!line) { kept.push(''); continue; }
+    if (/href=|src=|https?:\/\//i.test(line)) continue;                      // 链接 / 图片
+    if (/^<\/?[a-zA-Z][^>]*>$/.test(line)) continue;                          // 纯标签行
+    if (/^[-*+]\s/.test(line) && line.length < 40) continue;                  // 短列表项
+    if (/^\d+[.)]\s/.test(line) && line.length < 40) continue;                // 短编号项
+    if ((line.match(/[<>]/g) || []).length >= 2 && line.length < 80) continue; // 标签密集的短行
+    kept.push(raw);
+  }
+  return kept.join('\n');
+}
+
 export function englishMetrics(text) {
-  const sentences = String(text).split(/[.!?\n]+/).map((s) => s.trim()).filter((s) => s.length >= 8);
+  const prose = stripStructuralLines(text);
+  const sentences = String(prose).split(/[.!?\n]+/).map((s) => s.trim()).filter((s) => s.length >= 8);
   if (sentences.length === 0) return { sentences: 0, dupRatio: 0, gramMax: 0, gramKey: '' };
   const seen = new Map();
   for (const s of sentences) {
@@ -238,8 +268,11 @@ export function isEnglishDegenerate(metrics, cfg) {
   if (!metrics || metrics.sentences === 0) return false;
   const byDup = metrics.sentences >= (cfg.englishMinSentences ?? 12)
     && metrics.dupRatio >= (cfg.englishDupRatioMin ?? 0.30);
+  // 4 词判据除了看绝对次数，还要看它在这块里的占比：
+  // 667 句的长块里同构开头出现 12 次只是「逐条列举」，不是退化（2026-11-25 全库回归抓到的那一例）
   const byGram = metrics.sentences >= (cfg.englishGramMinSentences ?? 20)
-    && metrics.gramMax >= (cfg.englishGramMin ?? 10);
+    && metrics.gramMax >= (cfg.englishGramMin ?? 10)
+    && metrics.gramMax / metrics.sentences >= (cfg.englishGramRatioMin ?? 0.10);
   return byDup || byGram;
 }
 
@@ -511,9 +544,17 @@ export function apply(ctx, config = {}) {
    * 只在流内掐断相关的几个节点写，量很小。
    */
   const traceFile = `${dshHome()}/thinking-guard-trace.log`;
+  /** trace 一直开着会一直长，超过这个大小就轮转一次（覆盖旧的 .1）。 */
+  const TRACE_MAX_BYTES = 2 * 1024 * 1024;
+  let traceWrites = 0;
   const trace = (msg) => {
     if (!cfg.traceEnabled) return;
-    try { fs.appendFileSync(traceFile, `${new Date().toISOString()} ${msg}\n`); } catch { /* 写不进去就算了 */ }
+    try {
+      if (traceWrites++ % 100 === 0) {
+        try { if (fs.statSync(traceFile).size > TRACE_MAX_BYTES) fs.renameSync(traceFile, traceFile + '.1'); } catch { /* 文件还不存在 */ }
+      }
+      fs.appendFileSync(traceFile, `${new Date().toISOString()} ${msg}\n`);
+    } catch { /* 写不进去就算了 */ }
   };
 
   /**
@@ -533,7 +574,9 @@ export function apply(ctx, config = {}) {
     ctx.effect(() => ctx.systemPrompt.section({
       name: SECTION_NAME,
       order: SECTION_ORDER,
-      text: () => cfg.promptText,
+      // 系统提示段是全局拼的，拿不到当前会话 id：只能按「全局档」决定要不要注入。
+      // 全局拨到 0（关）就不再发这段；单独关掉某个会话仍会带上它——README 已写明这点。
+      text: () => (readGlobal(file) === 0 ? '' : cfg.promptText),
       interpolate: false,
     }), 'thinking-guard: section');
   }
@@ -582,7 +625,8 @@ export function apply(ctx, config = {}) {
       killedSessions.delete(normalizeId(sid) || sid);
       const notice = String(cfg.afterKillText ?? '')
         .replace(/\{run\}/g, String(killedInfo.run))
-        .replace(/\{chars\}/g, String(killedInfo.chars));
+        .replace(/\{chars\}/g, String(killedInfo.chars))
+        .replace(/\{reason\}/g, killedInfo.reason ?? '重复写空话');
       trace(`注入掐断提示 sid=${String(sid).slice(0, 16)} run=${killedInfo.run}`);
       const finalNotice = killedInfo.hint
         ? notice + " 你刚才想到的：" + killedInfo.hint + " 别再重推，直接动手。"
@@ -719,6 +763,8 @@ export function apply(ctx, config = {}) {
       let englishBuf = '';
       let englishHit = false;
       let englishWhy = '';
+      /** 连续几次采样都判退化；半截缓冲会抖，要两次才算数。 */
+      let englishStreak = 0;
       let pairKey = "";
       const pairCounts = new Map();
       const isPlaceholder = (line) => MARK_LINE.test(line) || (line.length <= 4 && /^嗯[，,。]?$/.test(line));
@@ -775,9 +821,13 @@ export function apply(ctx, config = {}) {
           if (cfg.streamKillEnglishEnabled && deltaCount % 20 === 0 && englishBuf.length > 600) {
             const englishMetricsResult = englishMetrics(englishBuf.slice(-6000));
             if (isEnglishDegenerate(englishMetricsResult, cfg)) {
-              englishHit = true;
+              englishStreak += 1;
               englishWhy = '英文重复 句占比 ' + Math.round(englishMetricsResult.dupRatio * 100) + '% / 4词重复 ' + englishMetricsResult.gramMax + ' 次「' + englishMetricsResult.gramKey + '」';
+            } else {
+              englishStreak = 0;
             }
+            // 只超阈一次不算：半截缓冲的分母还在长，占比会虚高（2026-11-25 那次误伤就是单次采样）
+            if (englishStreak >= 2) englishHit = true;
           }
           const forceHit = forceChars > 0 && chars >= forceChars;
           if (forceHit || (!cooling && (englishHit || repeatHit || densityHit || shortHit))) {
@@ -790,6 +840,16 @@ export function apply(ctx, config = {}) {
                 : densityHit
                   ? `密度 ${placeLines}/${recentLines.length}`
                   : `连续 ${run} 行`;
+            /** 给模型看的人话原因；日志里的 why 带数字，不适合直接嵌进提示。 */
+            const whyText = forceHit
+              ? '测试强制触发'
+              : englishHit
+                ? '英文句子里反复写同一句'
+                : repeatHit
+                  ? '同一对行来回写'
+                  : densityHit
+                    ? '占位行太密'
+                    : `连着写了 ${run} 行短句`;
             if (cfg.streamKillDryRun) {
               log(`[试运行] 该掐了：${why}，已生成 ${chars} 字符`);
               trace(`试运行命中 ${why} chars=${chars}`);
@@ -801,11 +861,31 @@ export function apply(ctx, config = {}) {
               killStreak.set(key, streakBefore + 1);
               recordKill(key);
               const hint = buildCompensation(recentLines, cfg);
-              if (hint) trace("掐断补偿：" + hint);
+              if (hint) trace("掐断补偿：" + hint.length + " 字（原文不入日志）");
+
+              // 伪造之前先看一眼这个会话有没有那个工具：子代理、自定义预设可能没有 get_goal。
+              // 探不到工具表就维持原行为（不动成功路径）；明确探到「没有」才退回慢速续轮。
+              const fakeToolState = (() => {
+                const ref = sessionAgents.get(key);
+                const lists = [ref?.tools, ref?.toolNames, ref?.session?.tools, ref?.session?.toolNames];
+                for (const list of lists) {
+                  if (Array.isArray(list)) {
+                    return list.some((t) => (typeof t === 'string' ? t : t?.name) === cfg.fakeToolName);
+                  }
+                  if (list && typeof list === 'object') {
+                    return Object.prototype.hasOwnProperty.call(list, cfg.fakeToolName);
+                  }
+                }
+                return null;
+              })();
+              const canFast = useFastContinue && fakeToolState !== false;
+              if (useFastContinue && fakeToolState === false) {
+                trace(`这个会话里没有 ${cfg.fakeToolName}，退回慢速续轮`);
+              }
 
               // 快速续轮：伪造一个只读工具调用，把 finish 改成 tool-calls。
               // 这一轮于是不会结束，直接进下一步（延迟 <1s），下一步的 pre-step 再注入提示。
-              if (useFastContinue) {
+              if (canFast) {
                 const fakeIndex = maxIndex + 1;
                 const fakeId = `call_${randomUUID()}`;
                 const fakeName = cfg.fakeToolName;
@@ -816,7 +896,7 @@ export function apply(ctx, config = {}) {
                 yield { type: 'block-end', index: fakeIndex, block: { type: 'tool-call', id: fakeId, name: fakeName, arguments: fakeArgs } };
                 yield { type: 'finish', reason: { kind: 'tool-calls' } };
                 // 让下一步的 pre-step 注入「你被截断了」（伪造路径没有投递消息，只能靠它）
-                killedSessions.set(key, { run, chars, hint });
+                killedSessions.set(key, { run, chars, hint, reason: whyText });
                 return;
               }
 
@@ -826,8 +906,9 @@ export function apply(ctx, config = {}) {
                 const agentRef = sessionAgents.get(key);
                 if (agentRef && typeof agentRef.followup === 'function') {
                   try {
+                    const followText = String(cfg.afterKillText).replace(/\{reason\}/g, whyText);
                     agentRef.followup(buildUserMessage({
-                      content: [{ type: 'text', text: cfg.afterKillText }],
+                      content: [{ type: 'text', text: followText }],
                       source: { kind: 'plugin:' + name },
                     }));
                     continued = true;
@@ -839,7 +920,7 @@ export function apply(ctx, config = {}) {
                   trace('没有缓存的 agent，掐断后不会自动续（该会话还没走过 pre-step）');
                 }
               }
-              if (!continued) killedSessions.set(key, { run, chars, hint });
+              if (!continued) killedSessions.set(key, { run, chars, hint, reason: whyText });
               break;
             }
           }
