@@ -6,8 +6,8 @@
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-2dd4bf"></a>
   <a href="package.json"><img alt="Node" src="https://img.shields.io/badge/node-%3E%3D20-60a5fa"></a>
   <a href="package.json"><img alt="DSH" src="https://img.shields.io/badge/DSH-%E2%89%A50.2.0--rc.1-a78bfa"></a>
-  <img alt="tests" src="https://img.shields.io/badge/tests-68%20passing-4ade80">
-  <img alt="version" src="https://img.shields.io/badge/version-2.0.2-f59e0b">
+  <img alt="tests" src="https://img.shields.io/badge/tests-80%20passing-4ade80">
+  <img alt="version" src="https://img.shields.io/badge/version-2.0.3-f59e0b">
 </p>
 
 <p align="center">
@@ -24,9 +24,9 @@
 
 <p align="center">
   Cutting loses the second half of a thought. Replacing a whole block throws the good part away with the bad.<br>
-  Measured on the worst sessions: filler ate 20–33% of the lines but only 3.6–6.7% of the characters —
-  strip that sliver and <b>93–96% of the reasoning still reaches the model</b>.<br>
-  Across all 17,386 blocks we have on disk, it strips 0.28%.
+  Measured on the worst sessions: filler ate 20–33% of the lines but only 2.7–5.0% of the characters —
+  strip that sliver and <b>95–97% of the reasoning still reaches the model</b>.<br>
+  Across all 17,633 blocks we have on disk, it strips 0.21%.
 </p>
 
 <p align="center">
@@ -146,7 +146,7 @@ Only after all that did I land on "count inside the stream and cut it" — and t
 Two layers. **The first one is the main road — it runs whenever the colour is on**:
 
 > Before each request, every line that is nothing but 「做。」「好。」「嗯。」 is dropped from the history, and the rest is kept verbatim.
-> Measured on the worst sessions: the strip removes 3.6–6.7% of the characters, so **93–96% of the reasoning still reaches the model**. Averaged over all 17,386 blocks on our disks it removes 0.28% — most blocks carry no filler at all.
+> Measured on the worst sessions: the strip removes 2.7–5.0% of the characters, so **95–97% of the reasoning still reaches the model**. Averaged over all 17,633 blocks on our disks it removes 0.21% — most blocks carry no filler at all.
 
 <p align="center">
   <img src="assets/strip-keep-en.svg" alt="Only the filler lines are dropped; every real sentence stays" width="880">
@@ -355,7 +355,7 @@ Three premises, each measured
 
 **One: every dropped line carries no information of its own**
 
-All 25,830 dropped lines, checked one by one:
+All 25,908 dropped lines, checked one by one:
 
 | Check | Result |
 |---|---|
@@ -365,13 +365,13 @@ All 25,830 dropped lines, checked one by one:
 
 **Two: what is left is a strict subsequence of the original**
 
-All 2,946 touched blocks compared line by line: every surviving line appears in the original, in the original order, **2,946 / 2,946 pass**; content that does not exist in the original: **0 characters**
+All 3,005 touched blocks compared line by line: every surviving line appears in the original, in the original order, **3,005 / 3,005 pass**; content that does not exist in the original: **0 characters**
 
 So it is a subtraction, nothing else — no rewriting, no stitching, no reordering
 
 **Three: nothing gets cut mid-sentence**
 
-23,757 dropped lines sat in the middle of a block, 2,074 at the end, **0 at the beginning**
+23,807 dropped lines sat in the middle of a block, 2,101 at the end, **0 at the beginning**
 
 Only **4 lines** had an unclosed punctuation mark (a 「，」 or 「：」) in front of them. All four, read:
 
@@ -420,23 +420,23 @@ node scripts/dump-pairs.mjs --n 8 --out pairs.md     # export your own side-by-s
 
 ## 📊 Where the numbers come from
 
-None of the percentages above were eyeballed. The corpus is **17,386 reasoning blocks** from 184 sessions on my machine — 461,430 lines, 38 million characters — measured with the plugin's own `stripPlaceholderLines()`, so what gets measured is what actually runs.
+None of the percentages above were eyeballed. The corpus is **17,633 reasoning blocks** from 184 sessions on my machine — 461,430 lines, 38 million characters — measured with the plugin's own `stripPlaceholderLines()`, so what gets measured is what actually runs.
 
 | Item | Value (2026-11-25 snapshot) |
 |---|---|
 | Session files | 184 |
-| Reasoning blocks | 17,386 |
-| Lines / characters | 461,430 / 38,012,892 |
-| Filler lines | 25,828 (5.60% of all lines) |
-| Filler characters | 53,407 (0.14% of all characters) |
+| Reasoning blocks | 17,633 |
+| Lines / characters | 469,164 / 38,391,706 |
+| Filler lines | 25,908 (5.52% of all lines) |
+| Filler characters | 53,585 (0.14% of all characters) |
 
-**Across every block**: 38,012,892 characters untouched, 37,907,834 (99.72%) after stripping — the entire corpus loses about 105k characters.
+**Across every block**: 38,391,706 characters untouched, 38,312,307 (99.79%) after stripping — the entire corpus loses about 79k characters.
 
 **On the 69 blocks the block-level criterion calls degenerate**, the two approaches split hard:
 
 | Approach | Kept | Share of original |
 |---|---|---|
-| Line-by-line strip (this plugin) | 36,116 characters | **55.69%** |
+| Line-by-line strip (this plugin) | 43,123 characters | **66.49%** |
 | Whole-block replace (everybody else) | 1,311 characters | 2.02% |
 
 Same 69 blocks, same 64,854 characters. Whole-block replacement throws nearly all of it away — one「omitted」line per block — while line-by-line strip keeps more than half. **That table is the entire basis for the "information retention" claim.**
@@ -451,7 +451,7 @@ node scripts/measure-scrub.mjs /path/to/sessions   # point it at another corpus
 node scripts/measure-scrub.mjs --json              # machine-readable
 ```
 
-**Limits**: this is a local corpus, not a public dataset — another corpus will give different numbers. It also drifts: it was 17,386 blocks while this page was written, and it is not that number an hour later. Trust the order of magnitude, not the last digit.
+**Limits**: this is a local corpus, not a public dataset — another corpus will give different numbers. It also drifts: it was 17,633 blocks while this page was written, and it is not that number an hour later. Trust the order of magnitude, not the last digit.
 
 ---
 
@@ -565,7 +565,7 @@ node scripts/replay-block.mjs block.txt --json   # machine-readable
 
 To see how the two approaches diverge across a **whole corpus**, run `scripts/measure-scrub.mjs` — the numbers and the comparison table live in [Where the numbers come from](#-where-the-numbers-come-from).
 
-**68 cases**, covering: detector maths (strict and loose rules, blank-line skipping), per-tier behaviour (including tier 1 never shrinking the budget and tier 2 shrinking exactly one step), stream-cut thresholds and early give-up, the adjacent-pair detector, the English sentence detector, the cooldown window, cut compensation, line-by-line history scrubbing and the re-dispatch path, the runtime switch, the synthesized continuation, followup resumption and the no-duplicate-notice rule, the test hook requiring a session id, the retired stop path and its 16-item limit, notice template substitution, per-session state isolation and corrupt-file tolerance, the two-axis colour-plus-shape store, the loopback route, and the browser-half load protocol
+**80 cases**, covering: detector maths (strict and loose rules, blank-line skipping), per-tier behaviour (including tier 1 never shrinking the budget and tier 2 shrinking exactly one step), stream-cut thresholds and early give-up, the adjacent-pair detector, the English sentence detector, the cooldown window, cut compensation, line-by-line history scrubbing and the re-dispatch path, the runtime switch, the synthesized continuation, followup resumption and the no-duplicate-notice rule, the test hook requiring a session id, the retired stop path and its 16-item limit, notice template substitution, per-session state isolation and corrupt-file tolerance, the two-axis colour-plus-shape store, the loopback route, and the browser-half load protocol
 
 ---
 

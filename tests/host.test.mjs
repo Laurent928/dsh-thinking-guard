@@ -810,6 +810,61 @@ test('strip 模式：占位行整行剔掉，正文一个字不丢', async () =>
   assert.equal(out.messages[0].content[1].text, '正文不动。', '正文块不碰');
 });
 
+test('围栏代码里的占位行不删（2026-11-25 外部评估 5）', async () => {
+  const { stripPlaceholderLines } = await import('../src/index.js');
+  const src = ['看这段证据：', '```', '做。', '好。', '```', '嗯。', '所以结论是 X。'].join('\n');
+  const { text, dropped } = stripPlaceholderLines(src);
+  assert.equal(dropped, 1, '只该删围栏外那个「嗯。」');
+  assert.ok(text.includes('```\n做。\n好。\n```'), '围栏内的两行要原样留着');
+  assert.ok(!/\n嗯。\n/.test(text), '围栏外的占位行仍然要删');
+});
+
+test('波浪线围栏、引用块、缩进代码都受保护', async () => {
+  const { stripPlaceholderLines } = await import('../src/index.js');
+  const src = ['~~~', '好。', '~~~', '> 做。', '    嗯。', '正文。'].join('\n');
+  const { dropped, text } = stripPlaceholderLines(src);
+  assert.equal(dropped, 0, '这三种行都不该被删');
+  assert.equal(text, src, '一行都不该动');
+});
+
+test('剥离不动字节：不 trim、不压空行', async () => {
+  const { stripPlaceholderLines } = await import('../src/index.js');
+  const src = '  开头有缩进空格。  \n好。\n\n\n\n中间空三行。\n做。\n';
+  const { text, dropped } = stripPlaceholderLines(src);
+  assert.equal(dropped, 2);
+  assert.equal(text, '  开头有缩进空格。  \n\n\n\n中间空三行。\n', '只少了那两行，其余字节一致');
+});
+
+test('没删到东西时原样返回同一个字符串（不走缓存也字节一致）', async () => {
+  const { stripPlaceholderLines } = await import('../src/index.js');
+  const src = '  这段没有占位行，首尾还有空白。  \n\n';
+  const out = stripPlaceholderLines(src);
+  assert.equal(out.dropped, 0);
+  assert.equal(out.text, src);
+});
+
+test('剥离缓存：同一块第二次命中，结果一模一样（2026-11-25 性能）', async () => {
+  const { stripPlaceholderLines, scrubCacheStats } = await import('../src/index.js');
+  // 造一段够长、且带占位行的文本（缓存阈值 160 字符）
+  const big = Array.from({ length: 40 }, (_, i) => `第 ${i} 行内容。`).join('\n') + '\n好。\n做。\n';
+  const first = stripPlaceholderLines(big);
+  const before = scrubCacheStats();
+  const second = stripPlaceholderLines(big);
+  const after = scrubCacheStats();
+  assert.equal(first.dropped, 2);
+  assert.equal(second.text, first.text, '缓存不能改变结果');
+  assert.equal(second.dropped, first.dropped);
+  assert.ok(after.hits > before.hits, '第二次应该命中缓存');
+});
+
+test('缓存容量必须大于单次请求的块数（踩过的坑：512 时命中率恒为 0）', () => {
+  const src = fs.readFileSync(new URL('../src/index.js', import.meta.url), 'utf8');
+  const m = /const SCRUB_CACHE_MAX = (\d+);/.exec(src);
+  assert.ok(m, '找不到 SCRUB_CACHE_MAX');
+  const cap = Number(m[1]);
+  assert.ok(cap >= 1000, `缓存上限 ${cap} 太小：长会话一次请求就有六七百个块，淘汰会自毁`);
+});
+
 test('strip 模式：几乎全是占位行的块整块换成省略标记', async () => {
   const { scrubDegenerateReasoning } = await import('../src/index.js');
   const messages = [{ role: 'assistant', content: [{ type: 'reasoning', text: '做。\n'.repeat(40) }] }];

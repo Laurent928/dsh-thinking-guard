@@ -226,15 +226,19 @@ export function stripStructuralLines(text) {
   let src = String(text ?? '');
   // 围栏代码块整块扔掉：奇数段就是被 ``` 包住的内容
   src = src.split('```').map((seg, i) => (i % 2 === 1 ? '' : seg)).join('');
+  const lines = src.split('\n');
+  const mask = protectMask(lines);            // 波浪线围栏、引用块、缩进代码都在这里挡掉
   const kept = [];
-  for (const raw of src.split('\n')) {
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i];
     const line = raw.trim();
     if (!line) { kept.push(''); continue; }
-    if (/href=|src=|https?:\/\//i.test(line)) continue;                      // 链接 / 图片
-    if (/^<\/?[a-zA-Z][^>]*>$/.test(line)) continue;                          // 纯标签行
-    if (/^[-*+]\s/.test(line) && line.length < 40) continue;                  // 短列表项
-    if (/^\d+[.)]\s/.test(line) && line.length < 40) continue;                // 短编号项
-    if ((line.match(/[<>]/g) || []).length >= 2 && line.length < 80) continue; // 标签密集的短行
+    if (mask[i]) continue;                                                     // 代码 / 引用 / 缩进
+    if (/href=|src=|https?:\/\//i.test(line)) continue;                         // 链接 / 图片
+    if (/^<\/?[a-zA-Z][^>]*>$/.test(line)) continue;                            // 纯标签行
+    if (/^[-*+]\s/.test(line) && line.length < 40) continue;                    // 短列表项
+    if (/^\d+[.)]\s/.test(line) && line.length < 40) continue;                  // 短编号项
+    if ((line.match(/[<>]/g) || []).length >= 2 && line.length < 80) continue;  // 标签密集的短行
     kept.push(raw);
   }
   return kept.join('\n');
@@ -284,18 +288,107 @@ export function isEnglishDegenerate(metrics, cfg) {
  * @param text - 原始 reasoning 文本。
  * @returns 剔完的文本与被剔掉的行数。
  */
+/**
+ * 标出「不许动」的行：围栏代码块内、引用块、缩进代码。
+ *
+ * 2026-11-25 外部评估指出：思考里粘贴的代码示例中的「好。」「做。」会被当占位行删掉。
+ * 实测这类行只占 0.127%，但删用户代码是原则问题，所以先扫一遍保护位。
+ * @param {string[]} lines - 原文按换行切出来的行。
+ * @returns {boolean[]} 每行是否受保护。
+ */
+export function protectMask(lines) {
+  const mask = new Array(lines.length).fill(false);
+  let fence = null;                 // 当前在哪种围栏里：'`' 或 '~'
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i];
+    const trimmed = raw.trim();
+    const fenceLine = /^(`{3,}|~{3,})/.exec(trimmed);
+    if (fenceLine) {
+      const marker = fenceLine[1][0];
+      mask[i] = true;
+      if (fence === null) fence = marker;
+      else if (fence === marker) fence = null;
+      continue;
+    }
+    if (fence !== null) { mask[i] = true; continue; }
+    if (trimmed.startsWith('>')) { mask[i] = true; continue; }              // 引用块
+    if (/^(?: {4}|\t)/.test(raw)) { mask[i] = true; continue; }             // 缩进代码
+  }
+  return mask;
+}
+
+/** 剥离结果缓存：同一块历史在后续每轮请求里都要再算一次，内容没变就该直接命中。 */
+const scrubCache = new Map();
+/**
+ * 缓存条数上限。
+ * 踩过的坑：一开始设 512，而一个长会话一次请求就要处理 677 个块——
+ * 容量比批量还小，淘汰等于自毁，命中率恒为 0。上限必须明显大于单次请求的块数。
+ */
+const SCRUB_CACHE_MAX = 2048;
+const SCRUB_CACHE_MIN_CHARS = 160;
+let scrubCacheHits = 0;
+let scrubCacheMisses = 0;
+
+/** 仅供测试与诊断：缓存规模与命中计数。 */
+export function scrubCacheStats() {
+  const total = scrubCacheHits + scrubCacheMisses;
+  return {
+    size: scrubCache.size,
+    hits: scrubCacheHits,
+    misses: scrubCacheMisses,
+    hitRate: total === 0 ? 0 : scrubCacheHits / total,
+  };
+}
+
+/**
+ * 把一段思考里的占位行整行剔掉，正文一字不动。
+ *
+ * 三条硬约束：
+ *   ① 只删整行，不 trim、不压空行——没删到东西时原样返回同一个字符串；
+ *   ② 围栏代码、引用块、缩进代码里的行不碰（protectMask）；
+ *   ③ 同一块内容算过一次就记住（历史每轮都会重传，命中率很高）。
+ * 为什么剔而不是整块删：占位行是模型模仿自己的源头，正文是它真想过的东西。
+ * 整块删会连带把有用的推理一起扔掉，模型下一轮只能从头再想一遍。
+ * @param text - 原始 reasoning 文本。
+ * @returns 剔完的文本与被剔掉的行数。
+ */
 export function stripPlaceholderLines(text) {
-  const lines = String(text).split('\n');
+  const source = String(text ?? '');
+  if (!source) return { text: source, dropped: 0 };
+
+  const cacheable = source.length >= SCRUB_CACHE_MIN_CHARS;
+  if (cacheable) {
+    const hit = scrubCache.get(source);
+    if (hit) { scrubCacheHits += 1; return hit; }
+  }
+
+  const lines = source.split('\n');
+  const mask = protectMask(lines);
   const kept = [];
   let dropped = 0;
-  for (const raw of lines) {
-    const trimmed = raw.trim();
-    if (trimmed && isPlaceholderLine(trimmed)) { dropped += 1; continue; }
-    kept.push(raw);
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i];
+    if (!mask[i]) {
+      const trimmed = raw.trim();
+      if (trimmed && isPlaceholderLine(trimmed)) { dropped += 1; continue; }
+    }
+    kept.push(raw);                       // 原样保留，一个字节都不改
   }
-  let out = kept.join('\n');
-  while (out.indexOf('\n\n\n') >= 0) out = out.split('\n\n\n').join('\n\n');
-  return { text: out.trim(), dropped };
+
+  const result = dropped === 0 ? { text: source, dropped: 0 } : { text: kept.join('\n'), dropped };
+
+  if (cacheable) {
+    scrubCacheMisses += 1;
+    if (scrubCache.size >= SCRUB_CACHE_MAX) {
+      let removed = 0;
+      for (const key of scrubCache.keys()) {
+        scrubCache.delete(key);
+        if (++removed > SCRUB_CACHE_MAX / 2) break;
+      }
+    }
+    scrubCache.set(source, result);
+  }
+  return result;
 }
 
 /**
@@ -326,7 +419,7 @@ export function scrubDegenerateReasoning(messages, cfg) {
         if (dropped < minDropped) return block;
         touched = true;
         stripped += dropped;
-        if (text.length > 0) return { ...block, text };
+        if (text.trim().length > 0) return { ...block, text };
         removed += 1;
         return { ...block, text: '（上一段思考陷入重复 ' + dropped + ' 行占位，已省略）' };
       }
