@@ -24,8 +24,8 @@
 
 <p align="center">
   Cutting loses the second half of a thought. Replacing a whole block throws the good part away with the bad.<br>
-  Across all 17,633 reasoning blocks on our disks: <b>99.8% of the reasoning survives</b> — only 0.21% is stripped.<br>
-  Even the <b>69 worst blocks</b> keep 66% of their characters, where whole-block replacement throws away 98%.
+  When a model gets stuck it writes the same sentence over and over — in one real record, 602 of 686 lines were the same line.<br>
+  The plugin drops those repeat lines before each request and leaves the rest untouched: across 17,633 reasoning blocks, <b>99.8% of the characters survive</b>.
 </p>
 
 <p align="center">
@@ -145,7 +145,7 @@ Only after all that did I land on "count inside the stream and cut it" — and t
 Two layers. **The first one is the main road — it runs whenever the colour is on**:
 
 > Before each request, every line that is nothing but 「做。」「好。」「嗯。」 is dropped from the history, and the rest is kept verbatim.
-> Across all 17,633 blocks: **99.8% of the reasoning still reaches the model**, with just 0.21% stripped — most blocks carry no filler at all. Even the 69 worst degenerate blocks keep 66% of their characters, where whole-block replacement throws away 98%.
+> Across 17,633 reasoning blocks: **99.8% of the characters still reach the model**, with just 0.21% stripped — most blocks contain no repeat at all. Even the 69 worst ones keep 66%, where whole-block deletion throws away 98%.
 
 <p align="center">
   <img src="assets/strip-keep-en.svg" alt="Only the filler lines are dropped; every real sentence stays" width="880">
