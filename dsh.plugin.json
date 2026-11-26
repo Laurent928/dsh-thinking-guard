@@ -1,6 +1,6 @@
 {
   "id": "dsh-external/dsh-thinking-guard",
-  "version": "2.2.2",
+  "version": "2.2.3",
   "main": "./src/index.js",
   "description": "思考通道空转守卫：识别「做。/好。」式占位词循环，发请求前逐行摘掉这些填充、正文一字不动；输入框工具条有一颗字形（颜色＝是否整理历史，形状＝打断档位）。",
   "engines": {

@@ -211,11 +211,11 @@ test('端到端：门控拦下时不伪造工具，原 stop 照常透传', async
   const ctx = makeCtx();
   apply(ctx, { level: 3, adaptiveEnabled: true, streamKillMinChars: 0, streamKillRun: 15, ...CFG });
 
-  // 基线：占位率 25% 起步（已经是高位），所以后面 30% 出头的一步不该算"突变"
-  for (const every of [3, 3, 3]) await feedStep(ctx, sid, evenBlock({ total: 120, every }));
+  // 基线：占位率约 14%（不会触发密度判据的 25% 门槛），先把基线垫起来
+  for (const every of [6, 6, 6]) await feedStep(ctx, sid, evenBlock({ total: 120, every }));
 
-  // 这一步 30% 出头、且尾部连续触发判据；但基线也是高位 → 门控应该拦下
-  const cut = await feedStep(ctx, sid, evenBlock({ total: 60, every: 3, tail: 20 }));
+  // 这一步占位率约 25%、会命中密度判据；但基线 14% × 2 = 28%，25% 没到 → 门控应该拦下
+  const cut = await feedStep(ctx, sid, evenBlock({ total: 120, every: 3 }));
   assert.equal(cut, false, '没超过基线×2 就该放行原流');
 });
 
