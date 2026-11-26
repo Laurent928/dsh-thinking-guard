@@ -131,3 +131,37 @@ test('analyze：坏文件与坏记录都要计数，不能静默吞掉', () => {
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+test('analyze：榜单要把「实际触发过打断的会话」排在前面，哪怕它占位字符是 0', () => {
+  // 外部复核场景：9 个正常会话 + 1 个纯周期循环会话。
+  // 只按嫌疑字符排序的话，循环那个会话 badChars=0，会被挤出榜单，
+  // 于是「总表说触发 1 次，榜单前 8 名却全是正常会话」。
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'tg-rank-'));
+  try {
+    const write = (sid, text) => {
+      const dir = path.join(root, 'ws', `session-${sid}`);
+      fs.mkdirSync(dir, { recursive: true });
+      const ev = {
+        type: 'assistant/message', seq: 1, time: Date.now(),
+        data: { turn: 1, step: 1, message: { role: 'assistant', id: 'm1', content: [{ type: 'reasoning', text }], source: { kind: 'model' } } },
+      };
+      fs.writeFileSync(path.join(dir, 'session.v4.jsonl.zstd'), zlib.zstdCompressSync(Buffer.from(JSON.stringify(ev) + '\n', 'utf8')));
+    };
+    // 每行内容都不一样：用一段长文本滑窗取片段。
+    // 别用「第 N 步看第 N 行」那种模板——它会被相邻对/周期判据抓到，那就不叫正常会话了。
+    const src = Array.from({ length: 900 }, (_, n) => String.fromCharCode(0x4e00 + (n * 173) % 8000)).join('');
+    const line = (k) => src.slice((k * 37) % 600, (k * 37) % 600 + 34);
+    for (let i = 0; i < 9; i++) {
+      write(`n${i}`, Array.from({ length: 40 }, (_, k) => line(k + i * 40)).join('\n'));
+    }
+    write('zzz-cycle', Array.from({ length: 30 }, () => '</assistant>').join('\n'));
+
+    const report = JSON.parse(execFileSync(process.execPath, [SCRIPT, root, '--json', '--top', '8'], { encoding: 'utf8' }));
+    assert.ok(report.total.allCutBlocks >= 1, '总表要记到那次触发');
+    // 注意：会话 id 在报表里会截断到 8 个字符，zzz-cycle → zzz-cycl
+    assert.ok(report.sessions[0].sid.startsWith('zzz'), `榜单第一名必须是有实际触发的那个会话，实际是 ${report.sessions[0].sid}`);
+    assert.ok(report.sessions[0].allCut >= 1);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

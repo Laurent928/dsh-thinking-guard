@@ -6,8 +6,8 @@
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-2dd4bf"></a>
   <a href="package.json"><img alt="Node" src="https://img.shields.io/badge/node-%3E%3D22.15-60a5fa"></a>
   <a href="package.json"><img alt="DSH" src="https://img.shields.io/badge/DSH-%E2%89%A50.2.0--rc.1-a78bfa"></a>
-  <img alt="tests" src="https://img.shields.io/badge/tests-120%20passing-4ade80">
-  <img alt="version" src="https://img.shields.io/badge/version-2.3.2-f59e0b">
+  <img alt="tests" src="https://img.shields.io/badge/tests-116%20passing-4ade80">
+  <img alt="version" src="https://img.shields.io/badge/version-2.3.3-f59e0b">
 </p>
 
 <p align="center">
@@ -162,7 +162,7 @@
 | 2 | 慢续 | 档 1 + 真死循环时掐断，用 followup 慢续 | 等 7–21 秒 |
 | 3 | 快断 | 档 1 + 掐断后伪造只读调用秒接 | 历史里多一条假记录 |
 
-> 熔断（原第五档）已下线：它直接杀掉整轮，而冷却窗已经能挡住连环空转。`stop_sequences` 同样下线——两样的代码都还在，只是门槛抬到了界面够不着的地方。
+> 熔断（原第五档）已下线：它直接杀掉整轮，而打断不该比空转更伤。`stop_sequences` 同样下线——两样的代码都还在，只是门槛抬到了界面够不着的地方。
 
 还有两条保护，同样不在档位上。**两条默认都是关的**——曾把它们当默认行为，实测发现那是在帮倒忙：
 

@@ -6,8 +6,8 @@
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-2dd4bf"></a>
   <a href="package.json"><img alt="Node" src="https://img.shields.io/badge/node-%3E%3D22.15-60a5fa"></a>
   <a href="package.json"><img alt="DSH" src="https://img.shields.io/badge/DSH-%E2%89%A50.2.0--rc.1-a78bfa"></a>
-  <img alt="tests" src="https://img.shields.io/badge/tests-120%20passing-4ade80">
-  <img alt="version" src="https://img.shields.io/badge/version-2.3.2-f59e0b">
+  <img alt="tests" src="https://img.shields.io/badge/tests-116%20passing-4ade80">
+  <img alt="version" src="https://img.shields.io/badge/version-2.3.3-f59e0b">
 </p>
 
 <p align="center">

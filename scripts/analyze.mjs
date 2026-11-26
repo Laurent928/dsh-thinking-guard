@@ -220,7 +220,15 @@ for (const r of results) {
   perSession.set(r.sid, row);
 }
 
-const sessions = [...perSession.values()].filter((r) => r.blocks > 0).sort((a, b) => b.badChars - a.badChars);
+// 排序：**先让实际触发过打断的会话排前面**，再按嫌疑字符降序。
+// 只用 badChars 排会把「纯周期循环、占位行为 0」的会话挤到榜外——
+// 那种会话恰恰是插件真动过手的，最该被看见。
+const sessions = [...perSession.values()].filter((r) => r.blocks > 0).sort((a, b) => {
+  const aFired = a.allCut > 0, bFired = b.allCut > 0;
+  if (aFired !== bFired) return bFired ? 1 : -1;
+  if (a.allCut !== b.allCut) return b.allCut - a.allCut;
+  return b.badChars - a.badChars;
+});
 total.sessions = sessions.length;
 total.badSessions = sessions.filter((r) => r.badBlocks > 0).length;
 const pct = (a, b) => (b === 0 ? '0' : (a / b * 100).toFixed(2)) + '%';
