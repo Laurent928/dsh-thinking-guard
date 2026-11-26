@@ -18,7 +18,8 @@
 import { isLoopback, readJson, sendJson } from './route.js';
 import fs from 'node:fs';
 import { randomUUID } from 'node:crypto';
-import { dshHome, clearSessionLevel, effectiveLevel, effectiveTier, normalizeId, readGlobal, readSwitch, readGlobalTier, writeGlobal, writeGlobalTier, writeSessionLevel, writeSessionTier } from './state.js';
+import { dshHome, clearSessionLevel, effectiveLevel, effectiveTier, normalizeId, readGlobal, readSwitch, readGlobalTier, writeGlobal, writeGlobalTier, writeSessionLevel, writeSessionTier, writeSwitch } from './state.js';
+import { adaptiveDecision, lockSession, noteStep, readAdaptive } from './adaptive.js';
 
 /** Cordis 插件名。 */
 export const name = 'thinking-guard';
@@ -151,6 +152,29 @@ const DEFAULTS = {
   cycleStep: 512,
   /** 周期上限；再长就不当循环看了。 */
   cycleMaxPeriod: 4096,
+  /**
+   * 自适应门控（2026-11-26 加）：动手之前先问一句「这个会话现在是不是在异常期」。
+   *
+   * 为什么不是又一条判据：真实语料 177 个会话 / 2,421 轮上，固定阈值（>20% / >30%）
+   * 都能 4/4 抓到事故会话，但**每次都误伤同一个 game 会话**——它占位率是缓慢爬升的
+   * （13.6→14.0→17.2→18.5→19.5%），那是正常思考的节奏；真事故是突跳的（基线 11.8% → 某轮 87.3%）。
+   * 「基线中位数 × 2」正好分开：渐变的永远追不上自己的两倍，突变的立刻超。
+   * 参数扫描 12 组（行数门槛 20/30/50/80 × 下限 15/20/25%）：2× 全部 4/4 命中 + 0 误伤，
+   * 开火 15 轮 / 2,421 轮 = 0.62%；1.5× 每格都带误伤，2.5× 掉到 3/4，3× 掉到 2/4。
+   */
+  adaptiveEnabled: true,
+  /** 当前步占位率要超过「基线中位数 × 这个倍数」才允许开火。 */
+  adaptiveMultiplier: 2,
+  /** 绝对下限：基线接近 0 时兜底，免得新会话随便写两行就触发。 */
+  adaptiveFloor: 0.20,
+  /** 这一步至少这么多非空行才参与判断（13 行里 2 行占位没有统计意义）。 */
+  adaptiveMinLines: 30,
+  /** 前几步只学不判。 */
+  adaptiveWarmupSteps: 3,
+  /** 基线取最近多少步的中位数。 */
+  adaptiveWindow: 8,
+  /** 开火后锁几步：锁定期内按绝对下限放行，不等基线追上来。 */
+  adaptiveLockSteps: 5,
   /**
    * 冷却：同一会话在 cooldownWindowMs 内被掐到 cooldownHits 次，就歇 cooldownMs 再掐。
    *
@@ -962,6 +986,14 @@ export function apply(ctx, config = {}) {
       // 2026-11-23 教训：钩子全局生效时把我自己这个会话的思考也掐了。
       const key = normalizeId(sid) || String(sid);
       const testFor = testOverride && normalizeId(testOverride.sessionId ?? '') === key ? testOverride : null;
+
+      // —— 自适应门控：这一步允不允许开火，先看这个会话的历史 ——
+      // 运行时开关优先（thinking-guard-switches.json 的 adaptive），没设就用配置默认值。
+      const adaptiveFile = `${dshHome()}/thinking-guard-adaptive.json`;
+      const adaptiveOn = Boolean(readSwitch('adaptive') ?? cfg.adaptiveEnabled);
+      const adaptiveHist = adaptiveOn
+        ? (readAdaptive(adaptiveFile).sessions[key] ?? { rates: [], steps: 0, lockUntil: 0 })
+        : { rates: [], steps: 0, lockUntil: 0 };
       const runThreshold = Number.isInteger(testFor?.killRun) ? testFor.killRun : cfg.streamKillRun;
       const minChars = Number.isInteger(testFor?.minChars) ? testFor.minChars : cfg.streamKillMinChars;
       const forceChars = Number.isInteger(testFor?.forceChars) ? testFor.forceChars : 0;
@@ -986,7 +1018,7 @@ export function apply(ctx, config = {}) {
        */
       const freshBlock = () => ({
         chars: 0, deltas: 0, tail: '', maxRun: 0,
-        pendingLine: '', recentLines: [], lineTotal: 0, placeTotal: 0,
+        pendingLine: '', recentLines: [], lineTotal: 0, placeTotal: 0, shortTotal: 0,
         pairCounts: new Map(), pairMax: 0, pairKey: '',
         englishBuf: '', englishAt: -1e9, englishStreak: 0, englishHit: false, englishWhy: '',
         cycleBuf: '', cycleAt: -1e9,
@@ -1049,6 +1081,29 @@ export function apply(ctx, config = {}) {
         trace(`掐流命中 ${why} chars=${st.chars} streak=${streakBefore + 1}`);
         killStreak.set(key, streakBefore + 1);
         recordKill(key);
+        // 上锁：接下来几步按绝对下限放行，不等基线追上来
+        if (adaptiveOn) {
+          try { lockSession(adaptiveFile, key, cfg); } catch (error) { trace('自适应上锁失败 ' + String(error)); }
+        }
+      };
+
+      /**
+       * 一步结束了，把这一步的占位率记进自适应历史。
+       *
+       * **掐断的那一步记进去会把基线越拉越高**，下次再也够不到 2 倍门槛——掐一次把自己掐残。
+       * 所以 noteStep 里 killed=true 只推进步数、不推进历史。测试钩子的会话不记（免得污染统计）。
+       */
+      const finishStep = () => {
+        if (!adaptiveOn || testFor) return;
+        try {
+          noteStep(adaptiveFile, key, {
+            rate: st.lineTotal > 0 ? st.placeTotal / st.lineTotal : 0,
+            killed,
+            cfg,
+          });
+        } catch (error) {
+          trace('自适应统计写入失败 ' + String(error));
+        }
       };
 
       /**
@@ -1082,6 +1137,7 @@ export function apply(ctx, config = {}) {
           if (st.pairCounts.size > PAIR_COUNTS_MAX) st.pairCounts.clear();
           st.lineTotal += 1;
           if (isPlaceholder(line)) st.placeTotal += 1;
+          if (SHORT_LINE.test(line)) st.shortTotal += 1;
         }
 
         const run = trailingShortRun(st.tail);
@@ -1134,6 +1190,36 @@ export function apply(ctx, config = {}) {
 
         const englishHit = st.englishHit;
         if (!forced && !cycle && !englishHit && !repeatHit && !densityHit && !shortHit) return null;
+
+        // —— 自适应门控：判据说「这是循环」还不够，还得问「这个会话现在是不是在异常期」——
+        //    渐变的高占位率是正常思考的节奏（game 会话爬到 31% 也正常），突变才是病。
+        //
+        //    度量用**占位行占比**，不用短行占比：正常思考里短句本来就多（game 会话短行率
+        //    15–30%，比占位率高一大截），拿它当信号会多出 10 个误开火的会话（2026-11-26 实测）。
+        //
+        //    占位率本身低于下限时**不走门控**：那不是"填充词型"退化，门控阈值必然高于它、
+        //    拦下去只会白丢召回——⭐ 这种符号循环的占位率就是 0，靠这条才抓得住。
+        //
+        //    英文句重复和精确周期要求「原样重复」，本身就是强证据，同样不过门控。
+        const occupancyHit = shortHit || repeatHit || densityHit;
+        if (adaptiveOn && occupancyHit && !forced && placeRatio >= (cfg.adaptiveFloor ?? 0.20)) {
+          const gate = adaptiveDecision({
+            rate: placeRatio,
+            lines: st.lineTotal,
+            history: adaptiveHist.rates,
+            lockUntil: adaptiveHist.lockUntil,
+            step: adaptiveHist.steps,
+            cfg,
+          });
+          const show = (v) => (v === null || v === undefined ? '—' : Math.round(v * 100) + '%');
+          trace(`自适应门控 ${gate.allow ? '放行' : '拦下'}（${gate.reason} 当前 ${show(placeRatio)} 基线 ${show(gate.baseline)} 阈值 ${show(gate.threshold)}）`);
+          if (!gate.allow) {
+            // too-short 只是「现在还不能判」，不是「这个会话正常」：行数够了还要再看，
+            // 所以不能把整条流锁死（相邻对判据 20 行就命中，门控要 30 行才判，会撞上）。
+            if (gate.reason !== 'too-short') killDisabled = true;
+            return null;
+          }
+        }
 
         const why = forced
           ? '强制'
@@ -1265,11 +1351,13 @@ export function apply(ctx, config = {}) {
           yield { type: 'finish', reason: { kind: 'tool-calls' } };
           // 让下一步的 pre-step 注入「你被截断了」（伪造路径没有投递消息，只能靠它）
           killedSessions.set(key, { run: action.run, chars: st.chars, hint: action.hint, reason: action.whyText });
+          finishStep();
           return;
         }
         if (action?.kind === 'slow') break;
         yield chunk;
       }
+      finishStep();
       if (!killed) killStreak.delete(key);
       trace(`stream 结束 killed=${killed} deltas=${totalDeltas} chars=${st.chars} maxRun=${st.maxRun}`);
       if (killed) log('本次生成已提前结束（上层按正常 stop 处理）');
@@ -1290,6 +1378,7 @@ export function apply(ctx, config = {}) {
         if (req.method === 'GET') {
           const sid = new URL(req.url, 'http://127.0.0.1').searchParams.get('sessionId') ?? '';
           const effective = effectiveLevel(file, sid, cfg.level);
+          const adaptiveOn = Boolean(readSwitch('adaptive') ?? cfg.adaptiveEnabled);
           return sendJson(res, 200, {
             ok: true,
             level: effective.level,
@@ -1298,11 +1387,23 @@ export function apply(ctx, config = {}) {
             global: readGlobal(file) ?? null,
             max: MAX_LEVEL,
             fallback: cfg.level,
+            adaptive: adaptiveOn,
+            adaptiveDetail: {
+              multiplier: cfg.adaptiveMultiplier,
+              floor: cfg.adaptiveFloor,
+              minLines: cfg.adaptiveMinLines,
+            },
             test: testOverride,
           });
         }
         if (req.method === 'POST') {
           const body = await readJson(req);
+          // 自适应开关：{ adaptive: true|false }。运行时开关，不重启，写进 switches 文件。
+          if (body && typeof body.adaptive === 'boolean') {
+            writeSwitch('adaptive', body.adaptive);
+            log(`自适应门控 → ${body.adaptive ? '开' : '关'}`);
+            return sendJson(res, 200, { ok: true, adaptive: body.adaptive });
+          }
           // 测试钩子：{ test: { sessionId, killRun, minChars, forceChars } }，传 null 清除。
           // **必须带 sessionId**——全局生效的破坏性开关会连自己一起打。
           // 只存内存、不落盘，重启即失效。

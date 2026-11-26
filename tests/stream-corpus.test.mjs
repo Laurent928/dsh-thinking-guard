@@ -39,7 +39,7 @@ function makeCtx() {
 async function runStream(text, chunkSize, config = {}, sid = 'corpus') {
   writeSessionLevel(path.join(HOME, 'thinking-guard.json'), sid, 3);
   const ctx = makeCtx();
-  apply(ctx, { level: 3, traceEnabled: false, promptText: '', ...config });
+  apply(ctx, { adaptiveEnabled: false, level: 3, traceEnabled: false, promptText: '', ...config });
   const handler = ctx.handlers.get('llm/stream')[0];
   const chars = Array.from(text);
   const chunks = [];
@@ -197,7 +197,7 @@ const readTool = [
 async function feedChunks(chunks, config = {}, sid = 'blocks') {
   writeSessionLevel(path.join(HOME, 'thinking-guard.json'), sid, 3);
   const ctx = makeCtx();
-  apply(ctx, { level: 3, traceEnabled: false, promptText: '', streamKillMinChars: 0, ...config });
+  apply(ctx, { adaptiveEnabled: false, level: 3, traceEnabled: false, promptText: '', streamKillMinChars: 0, ...config });
   const handler = ctx.handlers.get('llm/stream')[0];
   const next = async function* () { for (const c of chunks) yield c; };
   const out = [];
@@ -246,7 +246,7 @@ function slowEnv(followup) {
 test('followup 同步抛错：不掐断，原 stop 照常到上层，也不记冷却', async () => {
   writeSessionLevel(path.join(HOME, 'thinking-guard.json'), 'followup-throw', 3);
   const ctx = makeCtx();
-  apply(ctx, { level: 3, traceEnabled: false, promptText: '', streamKillMinChars: 0, streamKillFastContinue: false });
+  apply(ctx, { adaptiveEnabled: false, level: 3, traceEnabled: false, promptText: '', streamKillMinChars: 0, streamKillFastContinue: false });
   const env = slowEnv(() => { throw new Error('fixture: inbox rejected'); });
   const agent = { session: { id: 'followup-throw', ownEvents: () => [] }, followup: (m) => { env.calls.push(m); return env.followup(); } };
   await ctx.handlers.get('agent/pre-step')[0]({ agent, messages: [] }, async () => ({ kind: 'enter', messages: [] }));
@@ -266,7 +266,7 @@ test('followup 同步抛错：不掐断，原 stop 照常到上层，也不记�
 test('followup 返回被拒的 Promise：同样按「没掐」处理', async () => {
   writeSessionLevel(path.join(HOME, 'thinking-guard.json'), 'followup-reject', 3);
   const ctx = makeCtx();
-  apply(ctx, { level: 3, traceEnabled: false, promptText: '', streamKillMinChars: 0, streamKillFastContinue: false });
+  apply(ctx, { adaptiveEnabled: false, level: 3, traceEnabled: false, promptText: '', streamKillMinChars: 0, streamKillFastContinue: false });
   let calls = 0;
   const agent = {
     session: { id: 'followup-reject', ownEvents: () => [] },
@@ -288,7 +288,7 @@ test('followup 返回被拒的 Promise：同样按「没掐」处理', async () 
 test('followup 投递成功：只续一次，且这次真算掐断', async () => {
   writeSessionLevel(path.join(HOME, 'thinking-guard.json'), 'followup-ok', 3);
   const ctx = makeCtx();
-  apply(ctx, { level: 3, traceEnabled: false, promptText: '', streamKillMinChars: 0, streamKillFastContinue: false });
+  apply(ctx, { adaptiveEnabled: false, level: 3, traceEnabled: false, promptText: '', streamKillMinChars: 0, streamKillFastContinue: false });
   let calls = 0;
   const agent = { session: { id: 'followup-ok', ownEvents: () => [] }, followup() { calls += 1; } };
   await ctx.handlers.get('agent/pre-step')[0]({ agent, messages: [] }, async () => ({ kind: 'enter', messages: [] }));

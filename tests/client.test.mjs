@@ -350,3 +350,134 @@ test('行为：按住往右拖 60px，真的会提交到第 3 档（换档不是
     g.document = savedDoc;
   }
 });
+
+test('行为：往下滑 14px 打开门控面板，点开关提交 adaptive', () => {
+  const React = (function () {
+    let slots = [];
+    let index = 0;
+    let rerender = null;
+    const api = {
+      createElement(type, props, children) { return { type, props: props || {}, children }; },
+      useState(init) {
+        const i = index++;
+        if (!(i in slots)) slots[i] = init;
+        const set = (v) => { slots[i] = typeof v === 'function' ? v(slots[i]) : v; if (rerender) rerender(); };
+        return [slots[i], set];
+      },
+      useRef(v) { const i = index++; if (!(i in slots)) slots[i] = { current: v }; return slots[i]; },
+      useCallback(fn) { index += 1; return fn; },
+      useEffect() { index += 1; },
+    };
+    api.__mount = (fn) => { rerender = () => { index = 0; api.__tree = fn(); }; index = 0; api.__tree = fn(); return api; };
+    return api;
+  })();
+
+  const listeners = { pointermove: [], pointerup: [], pointercancel: [] };
+  const win = {
+    addEventListener(type, fn) { (listeners[type] || (listeners[type] = [])).push(fn); },
+    removeEventListener(type, fn) { listeners[type] = (listeners[type] || []).filter((f) => f !== fn); },
+  };
+  const posts = [];
+  const fetchStub = (url, opts) => {
+    if (opts && opts.method === 'POST') {
+      const body = JSON.parse(opts.body);
+      posts.push(body);
+      return Promise.resolve({ json: () => Promise.resolve({ ok: true, adaptive: body.adaptive, level: 1, scope: 'session' }) });
+    }
+    return Promise.resolve({ json: () => Promise.resolve({ ok: true, level: 1, scope: 'session', max: 3, adaptive: true, adaptiveDetail: { multiplier: 2, floor: 0.2, minLines: 30 } }) });
+  };
+
+  const g = globalThis;
+  const savedDoc = g.document;
+  g.document = { getElementById: () => null, createElement: () => ({}), head: { appendChild() {} } };
+  try {
+    let render = null;
+    const { exports } = loadViaModuleLoader(React, { window: win, fetch: fetchStub });
+    exports.apply({
+      inject(services, fn) {
+        fn({ slots: { inject(n, cb) { cb(); }, register(meta, r) { render = r; return { dispose() {} }; } } });
+      },
+    });
+    const element = render({ sessionId: 'sess-panel' });
+    React.__mount(() => element.type(element.props));
+
+    const find = (node, pred) => {
+      if (!node || typeof node !== 'object') return null;
+      if (pred(node)) return node;
+      const kids = Array.isArray(node.children) ? node.children : (node.children ? [node.children] : []);
+      for (const k of kids) { const hit = find(k, pred); if (hit) return hit; }
+      return null;
+    };
+    const button = find(React.__tree, (n) => n.type === 'button');
+    assert.ok(button, '应找到字形按钮');
+    assert.equal(find(React.__tree, (n) => n.props && n.props.role === 'switch'), null, '一开始面板是收着的');
+
+    // 往下滑 14px
+    button.props.onPointerDown({ clientX: 200, clientY: 200, button: 0, preventDefault() {} });
+    listeners.pointermove[0]({ clientX: 201, clientY: 214 });
+    listeners.pointerup[0]({ clientX: 201, clientY: 214 });
+
+    const sw = find(React.__tree, (n) => n.props && n.props.role === 'switch');
+    assert.ok(sw, '下滑应打开门控面板，里面有开关');
+    assert.equal(sw.props['aria-checked'], 'true', '默认是开的');
+    assert.equal(posts.length, 0, '只是打开面板，不该提交任何东西');
+
+    // 点开关
+    sw.props.onClick();
+    assert.equal(posts.length, 1, '点开关应提交一次');
+    assert.equal(posts[0].adaptive, false, '从开切成关');
+    assert.equal(posts[0].level, undefined, '切开关不许顺手动档位');
+  } finally {
+    g.document = savedDoc;
+  }
+});
+
+test('行为：上抬仍然是「设全局」，没被下滑手势抢走', () => {
+  const React = (function () {
+    let slots = []; let index = 0; let rerender = null;
+    const api = {
+      createElement(type, props, children) { return { type, props: props || {}, children }; },
+      useState(init) { const i = index++; if (!(i in slots)) slots[i] = init; const set = (v) => { slots[i] = typeof v === 'function' ? v(slots[i]) : v; if (rerender) rerender(); }; return [slots[i], set]; },
+      useRef(v) { const i = index++; if (!(i in slots)) slots[i] = { current: v }; return slots[i]; },
+      useCallback(fn) { index += 1; return fn; },
+      useEffect() { index += 1; },
+    };
+    api.__mount = (fn) => { rerender = () => { index = 0; api.__tree = fn(); }; index = 0; api.__tree = fn(); return api; };
+    return api;
+  })();
+  const listeners = { pointermove: [], pointerup: [], pointercancel: [] };
+  const win = {
+    addEventListener(type, fn) { (listeners[type] || (listeners[type] = [])).push(fn); },
+    removeEventListener(type, fn) { listeners[type] = (listeners[type] || []).filter((f) => f !== fn); },
+  };
+  const posts = [];
+  const fetchStub = (url, opts) => {
+    if (opts && opts.method === 'POST') { posts.push(JSON.parse(opts.body)); return Promise.resolve({ json: () => Promise.resolve({ ok: true, level: 3, tier: 1, scope: 'global' }) }); }
+    return Promise.resolve({ json: () => Promise.resolve({ ok: true, level: 1, scope: 'session', max: 3 }) });
+  };
+  const g = globalThis;
+  const savedDoc = g.document;
+  g.document = { getElementById: () => null, createElement: () => ({}), head: { appendChild() {} } };
+  try {
+    let render = null;
+    const { exports } = loadViaModuleLoader(React, { window: win, fetch: fetchStub });
+    exports.apply({ inject(services, fn) { fn({ slots: { inject(n, cb) { cb(); }, register(meta, r) { render = r; return { dispose() {} }; } } }); } });
+    const element = render({ sessionId: 'sess-up' });
+    React.__mount(() => element.type(element.props));
+    const find = (node, pred) => {
+      if (!node || typeof node !== 'object') return null;
+      if (pred(node)) return node;
+      const kids = Array.isArray(node.children) ? node.children : (node.children ? [node.children] : []);
+      for (const k of kids) { const hit = find(k, pred); if (hit) return hit; }
+      return null;
+    };
+    const button = find(React.__tree, (n) => n.type === 'button');
+    button.props.onPointerDown({ clientX: 200, clientY: 200, button: 0, preventDefault() {} });
+    listeners.pointermove[0]({ clientX: 200, clientY: 186 });   // 上抬 14px
+    listeners.pointerup[0]({ clientX: 200, clientY: 186 });
+    assert.equal(posts.length, 1, '上抬应提交');
+    assert.equal(posts[0].scope, 'global', '上抬＝设全局');
+  } finally {
+    g.document = savedDoc;
+  }
+});

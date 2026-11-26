@@ -225,6 +225,7 @@ Then add the package name to `dsh.profile.bundles` in that profile's `package.js
 
 - **Click**: toggles colour, i.e. toggles history cleaning — green = working, grey = not cleaning
 - **Drag sideways**: changes the shape, i.e. the tier (circle → triangle → square), one step per 18px; the three shapes fan out while you drag, and you can just click one
+- **Drag down 12px**: slides out the "GATING" panel (it scrolls when there is more in it) holding the adaptive switch. Opposite direction from "up", so they never fight over a gesture
 - **Colour covers cleaning, shape covers cutting** — two channels, one job each, readable at a glance
 - **Turning the colour off does not turn cutting off**: a grey circle means cleaning off *and* no cutting; a **grey triangle or square means cleaning off but still cutting**. The tooltip says the two things separately ("cleaning off · fast cut on") instead of collapsing them into "no cut"
 - Entering either cutting tier (triangle / square) shows a three-second line above the glyph — "this tier really interrupts generation" — and it disappears when you click elsewhere. There is **no confirm dialog**, but the tier does bite; dragging into those tiers with the colour off warns too
@@ -344,6 +345,31 @@ The test is a **character-by-character period** over a bounded tail window — n
 | under `minLines` (10) lines | not judged at all |
 
 The two scales differ on purpose: below ten lines a share means nothing, while mid-stream has to win a race, so it is looser.
+
+### The gate: when a cut is allowed at all (2.2.0)
+
+After a detector says "this is a loop", one more question: **is this session in an abnormal phase right now?** On by default; drag the glyph down to turn it off.
+
+The reason is measured (177 sessions / 2,423 turns): a fixed threshold at 20% *or* 30% catches 4/4 incident sessions but **wrecks the same game session every time** — it was cut 11 times. The difference is not the absolute level, it is the rate of change:
+
+```
+game session   13.6% → 14.0% → 17.2% → 18.5% → 19.5%  (peaks at 31.4%)
+real incident  11.8% → 11.8% → 12.0% → 11.8% → 87.3%
+```
+
+Normal sessions climb slowly, and the baseline climbs right along with them, so "median baseline × 2" never catches up. Real incidents jump, and clear it instantly.
+
+| Rule | Incidents caught | Normal sessions hit |
+|---|---|---|
+| fixed > 20% / > 30% | 4/4 | 1 every time |
+| baseline × 3 | 2/4 | 0 |
+| **baseline × 2 + floor 20%** | **4/4** | **0** |
+
+Across a 12-point sweep only the 2× band is stable (1.5× always leaks a false fire, 2.5× drops to 3/4, 3× to 2/4), firing on 0.62% of turns.
+
+It only gates **the filler-share detectors** (consecutive short lines / adjacent pairs / density) — those read a *share*, and a gradual climb fools them. English sentence repetition and the exact-period rule demand a verbatim repeat, so they skip the gate. Below a 20% filler ratio the gate stands down too: a `⭐`-style loop has a filler ratio of 0, and gating it would throw away real recall.
+
+With no baseline yet it falls back to the absolute floor of 20% (not "judge nothing"), and **a cut step never enters the history** — otherwise the baseline climbs and the next spike can no longer clear 2×, so one cut would disarm the gate.
 
 **Why "share of short lines" is not the main rule**: it flags real analysis leads like 「可能：」 or 「我该：」 as filler — five false positives in testing. The line-based density rule retired for the same reason before v0.3.0: a 「做。」 line is 2 characters, so 26% of the lines was only 3% of the characters, and on live traffic it cut 11 normal thoughts in 21 minutes.
 
@@ -525,6 +551,13 @@ Any key can be overridden from the profile patch
 | `cycleWindow` | `12288` | Tail window in characters. A 2.3K period needs 4 repeats, so the window must exceed 4× the period by a margin |
 | `cycleStep` | `512` | Characters between checks (character-driven, so chunk size does not change the verdict) |
 | `cycleMaxPeriod` | `4096` | Period cap; anything longer is not treated as a loop |
+| `adaptiveEnabled` | `true` | **Gate switch**: after a detector fires, ask "is this session in an abnormal phase?" first. Off = the 2.1.0 behaviour. Also togglable at runtime via `{"adaptive": false}` in `thinking-guard-switches.json` |
+| `adaptiveMultiplier` | `2` | This step's filler ratio must exceed "median baseline × this" before cutting is allowed. Only 2× survived a 12-point sweep |
+| `adaptiveFloor` | `0.20` | Absolute floor when the baseline is near 0; when the ratio is below it the gate always lets the cut through (how `⭐`-style loops stay caught) |
+| `adaptiveMinLines` | `30` | Minimum non-empty lines before a step is judged |
+| `adaptiveWarmupSteps` | `3` | Steps before a baseline exists fall back to the absolute floor |
+| `adaptiveWindow` | `8` | How many recent steps the baseline median is taken over |
+| `adaptiveLockSteps` | `5` | Steps of lock after a cut: the gate keeps passing on the absolute floor instead of waiting for the baseline |
 | `streamKillEnglishEnabled` | `true` | Sentence-level detector for English: English filler lives inside sentences, where a line-level rule is blind |
 | `englishDupRatioMin` | `0.30` | Judge degenerate when one sentence makes up this share of all sentences |
 | `englishMinSentences` | `12` | Minimum sentence count before the duplicate rule applies |
