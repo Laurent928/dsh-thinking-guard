@@ -735,24 +735,33 @@ test('英文判据：中文块不会被英文判据误伤', async () => {
   assert.equal(isEnglishDegenerate(m, {}), false);
 });
 
-test('英文判据接进流内：Let me 循环会被掐', async () => {
+test('英文判据接进流内：同一句反复会被掐（关掉周期判据，单测这条线）', async () => {
   const file = path.join(HOME, 'thinking-guard.json');
   writeSessionLevel(file, 'english-kill', 3);
   const ctx = makeCtx();
   apply(ctx, {
     level: 3, streamKillRun: 999, streamKillMinChars: 0, maxKillStreak: 0,
-    streamKillEnglishEnabled: true, englishGramMin: 10, englishGramMinSentences: 20,
+    streamKillEnglishEnabled: true, streamKillCycleEnabled: false,
   });
   const handler = ctx.handlers.get('llm/stream')[0];
-  const verbs = ['check it', 'run the build', 'write the file'];
-  // 90 段：采样点在 deltaCount 的 20/40/60/80。缓冲 600 字以后才采样，
-  // 现在要连续两次采样都超阈才判（半截缓冲会抖），所以要给够两轮。
+  // 同一句反复，只换大小写和标点——归一化之后是同一句，字符层面却不是精确周期
+  const variants = [
+    'Let me check the file again.', 'LET ME CHECK THE FILE AGAIN!', 'let me check the file again?',
+    'Let me check the file again...', 'Let  me check the file again.',
+  ];
+  const others = [
+    'The preview looks wrong on the left edge.', 'Compare it with the saved manifest.',
+    'Roll back to the previous version.', 'Read the entry point and record its path.',
+  ];
   const chunks = [];
-  for (let i = 0; i < 90; i++) chunks.push({ type: 'reasoning-delta', text: `Let me ${verbs[i % verbs.length]}. ` });
+  for (let i = 0; i < 70; i++) {
+    const text = i % 3 === 2 ? `${others[Math.floor(i / 3) % others.length]} ` : `${variants[i % variants.length]} `;
+    chunks.push({ type: 'reasoning-delta', text });
+  }
   const next = async function* () { for (const c of chunks) yield c; };
   const out = [];
   for await (const c of handler({ sessionId: 'english-kill', tools: [{ name: 'get_goal' }] }, next)) out.push(c);
-  assert.ok(out.length < 90, `应提前掐断，实际放行 ${out.length}`);
+  assert.ok(out.length < 70, `应提前掐断，实际放行 ${out.length}`);
   assert.ok(ctx.logs.some((l) => l.includes('英文重复')), '日志应写明是英文重复命中');
 });
 

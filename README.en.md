@@ -153,7 +153,7 @@ Two layers. **The first one is the main road — it runs whenever the colour is 
 
 That layer is what breaks the self-reinforcement loop — the model sees what it wrote, minus the filler, and stops imitating it. Cutting loses the second half of a thought; replacing a whole block throws the good part away with the bad; stripping line by line does neither. Details in [Why it works](#-why-it-works)
 
-**The second layer is the fallback — the two cutting tiers**, and it fires on one of two shapes: one adjacent pair repeating ≥8 times while filler lines make up ≥15% of the block, or 15 consecutive short lines (1–6 characters) at the tail, once the thought has run past 150 characters:
+**The second layer is the fallback — the two cutting tiers**, and it fires on one of these shapes: the same stretch of tail content repeating verbatim ≥4 times (a 3-character symbol run and a two-thousand-character citation passage both count — language does not matter), or 15 consecutive short lines (1–6 characters) at the tail, or one adjacent pair repeating ≥8 times while filler lines make up ≥15% of the block — once the thought has run past 150 characters. Every rule is spelled out in [What counts as a loop](#-what-counts-as-a-loop):
 
 | Tier | Name | What it does | Price |
 |---|---|---|---|
@@ -311,11 +311,29 @@ Two sets of criteria: one decides whether this turn should be stopped, the other
 
 | Condition | Meaning |
 |---|---|
-| trailing 1–6 character lines ≥ `streamKillRun` (15), with ≥ `streamKillMinChars` (150) characters written | **the rule that actually fires on live traffic** — 14 of 26 cuts in two days |
-| or one adjacent line pair repeating ≥ `streamKillRepeatMin` (8) **and** filler lines ≥ `streamKillRepeatRatioMin` (15%) | pitched as the main detector, it has **never fired in two days**: a real loop rarely reaches 20 lines and slips past it. Kept as a supplement |
+| **exact tail period**: the same content repeating verbatim ≥ `cycleMinRepeats` (4) times, with a periodic stretch ≥ `cycleMinChars` (48) characters, once the thought has run past `streamKillMinChars` | **the other main rule since 2026-11-26**, blind to language, line breaks and punctuation. Protocol closing tags, unseparated symbol runs, repeated Chinese sentences, Russian cycles, multi-K citation loops — all land here |
+| or trailing 1–6 character lines ≥ `streamKillRun` (15), with ≥ `streamKillMinChars` (150) characters written | the main rule for Chinese filler rotation — 14 of 26 cuts in two days |
+| or English sentence-level: the same sentence (normalised) covering ≥ `englishDupRatioMin` (0.30) of all sentences, with ≥ `englishMinSentences` (12) sentences | English filler lives inside sentences, where a line-level rule is blind |
+| or one adjacent line pair repeating ≥ `streamKillRepeatMin` (8) **and** filler lines ≥ `streamKillRepeatRatioMin` (15%) | pitched as the main detector, it has **never fired in two days**. Kept as a supplement |
 | blocks under `streamKillRepeatMinLines` (20) lines | adjacent pairs are not counted |
 
+Every rule is counted **per reasoning block**. These counters used to be stream-wide, so "14 short lines + one real `read` + 14 short lines" added up to 28 consecutive short lines: the plugin synthesized a `get_goal` *after* the real tool had already been forwarded, and swallowed the original `stop`. Switching blocks now switches state, and a finished block drops its state.
+
+And **once the stream has produced a real tool call or visible text, no synthetic continuation happens at all** — that turn already has something to run; a fake tool would add a bogus record and lose a real finish event.
+
 > Not hiding the gap: the design called adjacent pairs the main signal; two days of traffic say the trailing-short-line rule is what moves. The real work is done by the history scrub — it forwards **126 times** over the same period, an order of magnitude more than cutting.
+
+**Five shapes were missing until 2026-11-26.** They share exactly one property: the same bytes come around again at the tail.
+
+| Shape | Why the old rules were blind | Period |
+|---|---|---|
+| protocol closing tags (`</assistant>`) repeating | one line is 12 characters, not a "1–6 character line", and not in the Chinese filler list | 13 |
+| unseparated symbol runs (`！！：`) | the whole passage is a single line, so line-start and density rules both fail | 3 |
+| the same long Chinese sentence repeating | thirty-odd characters per line — neither short nor filler | 36 |
+| Russian / other non-CJK short-sentence cycles | the Chinese filler list does not know them and the English rule does not read Cyrillic | 95 |
+| a whole numbered citation passage cycling | period over a thousand characters, longer than any line-level window | 2294 |
+
+The test is a **character-by-character period** over a bounded tail window — no hashing, no similarity score. A wrong period mismatches on its first character, so the average probe costs one or two comparisons: **0.05 ms** on a normal window, **0.31 ms** on a real loop. The window advances by characters received (every 512), not by chunk count, so splitting the same text into 11- or 256-character chunks gives the same verdict — there is a test for exactly that.
 
 **Block-level (used at pre-step, judges a finished block)**:
 
@@ -335,14 +353,16 @@ The two scales differ on purpose: below ten lines a share means nothing, while m
 
 | Condition | Meaning |
 |---|---|
-| one sentence (normalised) covering ≥ `englishDupRatioMin` (0.30) of all sentences, with ≥ `englishMinSentences` (12) sentences | whole sentences repeating |
-| or the same first four words repeating ≥ `englishGramMin` (10) times, with ≥ `englishGramMinSentences` (20) sentences, **and those clones making up ≥ `englishGramRatioMin` (0.10) of all sentences** | catches `Let me …` clones; the share test keeps a long checklist from looking degenerate |
+| one sentence (normalised) covering ≥ `englishDupRatioMin` (0.30) of all sentences, with ≥ `englishMinSentences` (12) sentences | whole sentences repeating — **the only English condition that can cut** |
+| the same first four words repeating ≥ `englishGramMin` (10) times, covering ≥ `englishGramRatioMin` (0.10) of all sentences | **observation only** — written to the trace, never cuts |
 
-And the metrics run on **prose only**: fenced code, lines with `href=` / `http`, bare HTML tag lines and list items under 40 characters are stripped first.
+**Why the four-word rule was demoted.** It cannot tell two identical-looking things apart: one set of sentences repeating, versus a perfectly normal checklist where all 25 sentences start with `For this verification pass,` and each ends differently. Both score 1.0 on opener frequency. The previous version cut on it, which is how a normal control got cut at 11-character chunks and passed untouched at 256-character chunks. Automatic cutting now rests on "the same sentence repeating" and the mid-stream exact period — both demand a verbatim repeat.
+
+And the metrics run on **prose only**: fenced code, lines with `href=` / `http`, short list items, and bare HTML tag lines **that have a matching opening tag**. Orphan closing tags (`</assistant>`, `</invoke>` — no `<assistant` anywhere before them) are kept as literals: they are not HTML, they are protocol artefacts, and when a model starts repeating them they are the evidence.
 
 That last part was added 2026-11-25. The model was writing a README nav — a dozen `<a href>` lines pointing at in-page anchors — which normalise to the same sentence, so it scored 32% and got cut. **That is authoring a table of contents, not looping.** The original text is now a fixture in `tests/host.test.mjs`, and a rerun over 10,092 English blocks gives **zero false positives**.
 
-Those thresholds come from those 4,504 real English blocks: duplicate-sentence share p99 0.10, max 0.267; the most repeated four-word opener appeared 9 times (a block re-reading a file path). At 0.30 / 10, **zero false positives** on our corpus. **Recall is unverified** — there is not a single real English loop sample in our data, so only someone who hits one can tell us.
+Those thresholds come from those 4,504 real English blocks: duplicate-sentence share p99 0.10, max 0.267. At 0.30, **zero false positives** on our corpus. **Recall is unverified** — there is not a single real English loop sample in our data, so only someone who hits one can tell us.
 
 ---
 
@@ -495,16 +515,23 @@ Any key can be overridden from the profile patch
 | `streamKillEnabled` | `true` | Master switch. False means detection only, no action |
 | `streamKillRun` | `15` | Trailing 1–6 character lines needed to cut. 0 disables |
 | `streamKillMinChars` | `150` | Never cut a thought shorter than this. Lowered from 600: the real incident hit 15 short lines at only 235 characters |
-| `streamKillRepeatEnabled` | `true` | **Main detector.** Cut when one adjacent line pair repeats `streamKillRepeatMin` times and filler lines are at least `streamKillRepeatRatioMin` of the block |
+| `streamKillRepeatEnabled` | `true` | Cut when one adjacent line pair repeats `streamKillRepeatMin` times and filler lines are at least `streamKillRepeatRatioMin` of the block |
 | `streamKillRepeatMin` | `8` | Repeats of the same adjacent pair before it counts |
 | `streamKillRepeatRatioMin` | `0.15` | Filler-line share required at the same time, so quoted tables and code do not trip it |
 | `streamKillRepeatMinLines` | `20` | Blocks shorter than this are not judged by repetition |
+| `streamKillCycleEnabled` | `true` | **Exact-period detector**: cut when the tail repeats the same content verbatim enough times. Blind to language, line breaks and punctuation — protocol closing tags, symbol runs, repeated Chinese sentences, Russian cycles and multi-K citation loops all land here |
+| `cycleMinRepeats` | `4` | Verbatim repeats of the same stretch before it counts |
+| `cycleMinChars` | `48` | Minimum periodic stretch, so `---` / `====` separators do not look like a loop |
+| `cycleWindow` | `12288` | Tail window in characters. A 2.3K period needs 4 repeats, so the window must exceed 4× the period by a margin |
+| `cycleStep` | `512` | Characters between checks (character-driven, so chunk size does not change the verdict) |
+| `cycleMaxPeriod` | `4096` | Period cap; anything longer is not treated as a loop |
 | `streamKillEnglishEnabled` | `true` | Sentence-level detector for English: English filler lives inside sentences, where a line-level rule is blind |
 | `englishDupRatioMin` | `0.30` | Judge degenerate when one sentence makes up this share of all sentences |
 | `englishMinSentences` | `12` | Minimum sentence count before the duplicate rule applies |
-| `englishGramMin` | `10` | Judge degenerate when the same first four words repeat this many times |
-| `englishGramMinSentences` | `20` | Minimum sentence count before the four-word rule applies |
-| `englishGramRatioMin` | `0.10` | Those clones must also cover this share of all sentences — a long checklist must not look degenerate |
+| `englishStep` | `600` | Sampling interval in characters received (not deltas — delta-based sampling made chunk size change the verdict) |
+| `englishGramMin` | `10` | **Observation** threshold for the four-word opener. Since 2026-11-26 it never cuts: it cannot tell a repeated set of sentences from a same-shaped checklist |
+| `englishGramMinSentences` | `20` | Same, sentence-count floor |
+| `englishGramRatioMin` | `0.10` | Same, share-of-sentences floor |
 | `streamKillDensityEnabled` | `false` | Density detector (filler lines as a share of **lines**). Off by default: a 「做。」 line is 2 characters, so 26% of lines was only 3% of characters — on live traffic it cut 11 normal thoughts in 21 minutes |
 | `cooldownWindowMs` | `600000` | Cooldown window per session |
 | `cooldownHits` | `3` | Cuts inside the window before cooling down |
@@ -545,6 +572,8 @@ How to run an honest A/B in one session: leave the history as it is (the plugin 
 - **`get_goal` may not exist in every preset.** If it is missing the call fails, but the finish reason is already `tool-calls`, so the turn continues anyway — you just get an error entry in history
 - **Recall rests on the one session that blew up**; precision is zero false positives across 968 normal blocks in five other sessions
 - **The English detector's recall is unverified** (precision: zero false positives on 4,504 real English blocks) — there is not a single English loop sample in our corpus
+- **The exact-period detector has only fired on reconstructed corpora, never on live traffic.** All five shapes it was built for exist so far only as public-report reproductions; none of our 17.7K thought blocks contains one. The upshot is a narrow false-positive surface, since it demands a verbatim repeat; the cost is that **real recall is still unknown** until someone hits one
+- **Periods longer than the window are invisible**: 12,288-character window, four repeats minimum, so a cycle with a period above 3,072 characters is not caught (such a turn would usually hit max-tokens long before anyway)
 - **`stop_sequences` does not touch thinking — falsified 2026-11-24.** The code path works (`config.stop` → `GenerateOptions.stop` → serialised into `stop_sequences`, visible in the request headers), the server accepted it, and the stream still ran to line 121 after the naked trigram showed up on line 19. That is why the attach threshold now sits at `level >= 99`
 
 ---
@@ -566,7 +595,9 @@ node scripts/replay-block.mjs block.txt --json   # machine-readable
 
 To see how the two approaches diverge across a **whole corpus**, run `scripts/measure-scrub.mjs` — the numbers and the comparison table live in [Where the numbers come from](#-where-the-numbers-come-from).
 
-**80 cases**, covering: detector maths (strict and loose rules, blank-line skipping), per-tier behaviour (including tier 1 never shrinking the budget and tier 2 shrinking exactly one step), stream-cut thresholds and early give-up, the adjacent-pair detector, the English sentence detector, the cooldown window, cut compensation, line-by-line history scrubbing and the re-dispatch path, the runtime switch, the synthesized continuation, followup resumption and the no-duplicate-notice rule, the test hook requiring a session id, the retired stop path and its 16-item limit, notice template substitution, per-session state isolation and corrupt-file tolerance, the two-axis colour-plus-shape store, the loopback route, and the browser-half load protocol
+**92 cases**. Alongside the earlier coverage, `tests/stream-corpus.test.mjs` feeds every degenerate shape and every normal control through 7 / 11 / 64 / 256 / 1024-character chunks and asserts **the verdict does not depend on the chunk size** — the previous version cut one normal control at 11 characters and passed it whole at 256. It also pins block isolation (two independent 14-line blocks must not add up to 28), the followup-failure path (a delivery error must leave the original stream and its `stop` intact, and must not count as a cut), and the CommonMark fence closing rules.
+
+The rest of the suite covers: detector maths (strict and loose rules, blank-line skipping), per-tier behaviour (including tier 1 never shrinking the budget and tier 2 shrinking exactly one step), stream-cut thresholds and early give-up, the adjacent-pair detector, the English sentence detector, the cooldown window, cut compensation, line-by-line history scrubbing and the re-dispatch path, the runtime switch, the synthesized continuation, followup resumption and the no-duplicate-notice rule, the test hook requiring a session id, the retired stop path and its 16-item limit, notice template substitution, per-session state isolation and corrupt-file tolerance, the two-axis colour-plus-shape store, the loopback route, and the browser-half load protocol
 
 ---
 

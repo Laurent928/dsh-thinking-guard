@@ -109,9 +109,8 @@ const DEFAULTS = {
   streamKillRepeatMinLines: 20,
   /**
    * 英文判据：英文的口水长在**句子里**（Let me… / Wait…），不单独成行，行级判据对它无效。
-   * 改用句级：①同一句重复太多；②句首 4 个词重复太多（抓「Let me do X」这种同构句）。
-   * 阈值是在 4504 个真实英文思考块上定的：句重复占比 99 分位 0.10、最大 0.267；
-   * 句首 4 词最多 9 次（那一块在反复念文件路径）。取 0.30 / 10 次，本语料零误报。
+   * 改用句级：同一句（归一化后）重复占比够高就判。
+   * 阈值是在 4504 个真实英文思考块上定的：句重复占比 99 分位 0.10、最大 0.267；取 0.30。
    * **召回未验证**：我们的语料里没有英文空转样本。
    */
   streamKillEnglishEnabled: true,
@@ -119,12 +118,39 @@ const DEFAULTS = {
   englishDupRatioMin: 0.30,
   /** 至少这么多句才看句重复。 */
   englishMinSentences: 12,
-  /** 句首 4 个词最多重复多少次就算退化。 */
+  /**
+   * 句首 4 词的重复次数。2026-11-26 起**只做观察信号**（进 trace，不参与掐断）。
+   * 原因见 isEnglishDegenerate：它分不开「同一组句子反复」和「同一句式逐条列举」。
+   */
   englishGramMin: 10,
-  /** 至少这么多句才看 4 词重复。 */
+  /** 句首 4 词的观察下限（句数）。 */
   englishGramMinSentences: 20,
-  /** 同一 4 词开头要占全部句子这么多比例才算退化：长块里的逐条列举不能算。 */
+  /** 句首 4 词占全部句子的比例，同样只做观察。 */
   englishGramRatioMin: 0.10,
+  /**
+   * 英文句级判据的采样间隔（按已收字符数，不按 delta 个数）。
+   * 按 delta 个数走的话，同一段文本换个分片就是另一种结论——11 字符分片会误掐，
+   * 256 字符分片又整段放过（2026-11-26 外部评估第 3 条）。
+   */
+  englishStep: 600,
+  /**
+   * 精确周期判据：同一段内容一字不差地重复够多遍就掐。
+   *
+   * 补的是行级判据和英文判据之间的那一大片：协议结束标签、无分隔符的符号串、
+   * 整句中文、俄文短句、几千字的编号引文段。它们跟语言、断行、标点都没关系，
+   * 唯一的共同点就是「同一段字节原样重来」。实现见 tailCycle。
+   */
+  streamKillCycleEnabled: true,
+  /** 同一段内容要原样重复这么多遍才算。 */
+  cycleMinRepeats: 4,
+  /** 周期区至少这么长才算，挡住 `---`、`====` 这类短分隔符被算成循环。 */
+  cycleMinChars: 48,
+  /** 单次看的尾部窗口（字符）。周期 2.3K 的样本要 4 遍，窗口必须明显大于 4×周期。 */
+  cycleWindow: 12288,
+  /** 隔多少字符查一次周期（按字符走，分片大小不影响结论）。 */
+  cycleStep: 512,
+  /** 周期上限；再长就不当循环看了。 */
+  cycleMaxPeriod: 4096,
   /**
    * 冷却：同一会话在 cooldownWindowMs 内被掐到 cooldownHits 次，就歇 cooldownMs 再掐。
    *
@@ -223,19 +249,32 @@ function normalizeEnglish(text) {
  * @returns 只剩散文句的文本（结构性行被换成空行，句子切分不变）。
  */
 export function stripStructuralLines(text) {
-  let src = String(text ?? '');
-  // 围栏代码块整块扔掉：奇数段就是被 ``` 包住的内容
-  src = src.split('```').map((seg, i) => (i % 2 === 1 ? '' : seg)).join('');
-  const lines = src.split('\n');
-  const mask = protectMask(lines);            // 波浪线围栏、引用块、缩进代码都在这里挡掉
+  const lines = String(text ?? '').split('\n');
+  const mask = protectMask(lines);            // 围栏、引用块、缩进代码都在这里挡掉
   const kept = [];
+  /** 已经出现过、还没闭合的开标签，用来分辨「真 HTML」和「协议自造的伪标签」。 */
+  const opened = new Map();
   for (let i = 0; i < lines.length; i++) {
     const raw = lines[i];
     const line = raw.trim();
     if (!line) { kept.push(''); continue; }
     if (mask[i]) continue;                                                     // 代码 / 引用 / 缩进
     if (/href=|src=|https?:\/\//i.test(line)) continue;                         // 链接 / 图片
-    if (/^<\/?[a-zA-Z][^>]*>$/.test(line)) continue;                            // 纯标签行
+    const tag = /^<\/?([a-zA-Z][a-zA-Z0-9:-]*)[^>]*>$/.exec(line);
+    if (tag) {
+      const element = tag[1].toLowerCase();
+      if (!line.startsWith('</')) {                                            // 开标签 / 自闭合：结构性
+        opened.set(element, (opened.get(element) ?? 0) + 1);
+        continue;
+      }
+      if ((opened.get(element) ?? 0) > 0) {                                    // 有对应开标签：正常闭合的 HTML
+        opened.set(element, opened.get(element) - 1);
+        continue;
+      }
+      // 孤儿闭合标签：前面根本没有同名开标签。`</assistant>` 这种不是 HTML，是协议自造的记号，
+      // 退化成复读时它才是证据，所以按字面量留着（2026-11-26 外部评估第 4 条）。
+      kept.push(raw); continue;
+    }
     if (/^[-*+]\s/.test(line) && line.length < 40) continue;                    // 短列表项
     if (/^\d+[.)]\s/.test(line) && line.length < 40) continue;                  // 短编号项
     if ((line.match(/[<>]/g) || []).length >= 2 && line.length < 80) continue;  // 标签密集的短行
@@ -270,14 +309,13 @@ export function englishMetrics(text) {
 /** 英文块判不判退化。 */
 export function isEnglishDegenerate(metrics, cfg) {
   if (!metrics || metrics.sentences === 0) return false;
-  const byDup = metrics.sentences >= (cfg.englishMinSentences ?? 12)
+  // 句首 4 词重复（gramMax）2026-11-26 起**只做观察信号，不再当掐断证据**。
+  // 原因：9716 那种「同一组句子反复」和「25 句都以 For this verification pass, 开头、
+  // 后半句各不同」的正常列举，在句首频率上长得一模一样（都是 1.0），分不开；
+  // 上一版拿它当判据，结果正常对照在 11 字符分片下被误掐。
+  // 现在自动掐断只认两样：同一句反复，以及流内那条「精确周期」。
+  return metrics.sentences >= (cfg.englishMinSentences ?? 12)
     && metrics.dupRatio >= (cfg.englishDupRatioMin ?? 0.30);
-  // 4 词判据除了看绝对次数，还要看它在这块里的占比：
-  // 667 句的长块里同构开头出现 12 次只是「逐条列举」，不是退化（2026-11-25 全库回归抓到的那一例）
-  const byGram = metrics.sentences >= (cfg.englishGramMinSentences ?? 20)
-    && metrics.gramMax >= (cfg.englishGramMin ?? 10)
-    && metrics.gramMax / metrics.sentences >= (cfg.englishGramRatioMin ?? 0.10);
-  return byDup || byGram;
 }
 
 /**
@@ -293,26 +331,38 @@ export function isEnglishDegenerate(metrics, cfg) {
  *
  * 2026-11-25 外部评估指出：思考里粘贴的代码示例中的「好。」「做。」会被当占位行删掉。
  * 实测这类行只占 0.127%，但删用户代码是原则问题，所以先扫一遍保护位。
+ *
+ * 围栏的开关按 CommonMark §4.5 走：关闭围栏必须同种字符、长度不短于开栅栏、整行只剩它。
+ * 早先只比首字符，于是 ```` 开着的围栏被一行 ``` 关掉，后面在围栏里的内容全被当成正文。
  * @param {string[]} lines - 原文按换行切出来的行。
  * @returns {boolean[]} 每行是否受保护。
  */
 export function protectMask(lines) {
   const mask = new Array(lines.length).fill(false);
-  let fence = null;                 // 当前在哪种围栏里：'`' 或 '~'
+  /** 当前围栏：{ char: '`' | '~', length }。 */
+  let fence = null;
   for (let i = 0; i < lines.length; i++) {
     const raw = lines[i];
     const trimmed = raw.trim();
-    const fenceLine = /^(`{3,}|~{3,})/.exec(trimmed);
-    if (fenceLine) {
-      const marker = fenceLine[1][0];
+    // 缩进 4 格以上的 ``` 是缩进代码，不是围栏；所以这里只认 0–3 个空格开头
+    const run = /^ {0,3}(`{3,}|~{3,})([\s\S]*)$/.exec(raw);
+    if (fence !== null) {
       mask[i] = true;
-      if (fence === null) fence = marker;
-      else if (fence === marker) fence = null;
+      if (run) {
+        // 关闭条件（CommonMark 0.31.2 §4.5）：同种字符、长度不短于开栅栏、后面不再跟别的东西。
+        // 早先只比首字符，于是 ```` 开着的围栏被一行 ``` 关掉，
+        // 后面本来在围栏里的正常内容全被当成正文（2026-11-26 外部评估第 5 条）。
+        if (run[1][0] === fence.char && run[1].length >= fence.length && run[2].trim() === '') fence = null;
+      }
       continue;
     }
-    if (fence !== null) { mask[i] = true; continue; }
-    if (trimmed.startsWith('>')) { mask[i] = true; continue; }              // 引用块
-    if (/^(?: {4}|\t)/.test(raw)) { mask[i] = true; continue; }             // 缩进代码
+    if (run) {
+      mask[i] = true;
+      fence = { char: run[1][0], length: run[1].length };
+      continue;
+    }
+    if (/^(?: {4}|\t)/.test(raw)) { mask[i] = true; continue; }              // 缩进代码
+    if (trimmed.startsWith('>')) { mask[i] = true; continue; }               // 引用块
   }
   return mask;
 }
@@ -474,6 +524,18 @@ export function buildCompensation(lines, cfg) {
 /** 只保留尾部这么多字符做实时判断，避免每次全量扫描。 */
 const TAIL_CHARS = 400;
 
+/** 英文句级判据的缓冲长度（字符）。 */
+const ENGLISH_BUF = 8000;
+
+/** 英文句级判据至少要看这么多字符才采样。 */
+const ENGLISH_MIN_BUF = 600;
+
+/** 攒着的完整行最多留这么多条（掐断补偿只用最后 3 条，再多就是白占内存）。 */
+const RECENT_LINES_MAX = 600;
+
+/** 相邻对计数表超过这么多条就清一次（长块里对子是平方级增长的）。 */
+const PAIR_COUNTS_MAX = 4096;
+
 /**
  * 数一段文本尾部「连续短行」有多少行。
  *
@@ -505,6 +567,54 @@ export function trailingShortRun(text) {
  */
 function linesOf(text) {
   return String(text ?? '').split('\n').map(s => s.trim()).filter(Boolean);
+}
+
+/**
+ * 在尾部窗口里找「精确周期」——同一段内容一字不差地重复够多遍。
+ *
+ * 为什么加这一条（2026-11-26 外部评估第 3、4 条）：公开报告里整整一类退化全都漏掉了，
+ * 而它们共同点只有一个——**同一段字节在尾巴上原样重来**：
+ *
+ * | 形态 | 为什么旧判据看不见 | 周期 |
+ * | --- | --- | --- |
+ * | `</assistant>` 这类协议结束标签复读 | 一行 12 个字符，不算「1–6 字短行」 | 13 |
+ * | `！！：` 这种没有分隔符的符号串 | 整段只有一行，行首/密度都失效 | 3 |
+ * | 同一条长中文陈述反复 | 一行 30 多字，且行与行相同但不算占位行 | 36 |
+ * | 俄文短句循环 | 俄文不进中文占位词表 | 95 |
+ * | 两千多字的编号引文段整段循环 | 周期比任何行级窗口都长 | 2294 |
+ *
+ * 逐字比对而不是上哈希：错的周期第一个字符就不符，实际成本约等于 O(周期上限)，
+ * 只有在真的周期性文本上才会往深处扫。
+ *
+ * @param {string} text - 已经过结构过滤的尾部窗口（调用方负责，见 stripStructuralLines）。
+ * @param {object} [opts] - 阈值。
+ * @returns {null | {period: number, repeats: number, chars: number}} 命中时返回周期、重复遍数与周期区长度。
+ */
+export function tailCycle(text, opts = {}) {
+  const minRepeats = Math.max(2, Math.floor(opts.cycleMinRepeats ?? 4));
+  const minChars = Math.max(1, Math.floor(opts.cycleMinChars ?? 48));
+  const maxPeriod = Math.max(1, Math.floor(opts.cycleMaxPeriod ?? 4096));
+  /** 比对次数的上限，防止极端文本让一次判定变慢。 */
+  const budget = Math.max(1000, Math.floor(opts.cycleBudget ?? 400000));
+  const source = String(text ?? '');
+  const n = source.length;
+  if (n < minChars) return null;
+  let work = 0;
+  const pMax = Math.min(maxPeriod, Math.floor(n / minRepeats));
+  for (let period = 1; period <= pMax; period++) {
+    const need = Math.max(minRepeats * period, minChars);
+    if (need > n) break;
+    const start = n - need;
+    let ok = true;
+    // 从尾巴往前比：错的周期几乎第一下就不符，所以平均只花一两次比对
+    for (let i = n - 1; i - period >= start; i--) {
+      work += 1;
+      if (source.charCodeAt(i) !== source.charCodeAt(i - period)) { ok = false; break; }
+    }
+    if (!ok) { if (work > budget) return null; continue; }
+    return { period, repeats: Math.floor(need / period), chars: need };
+  }
+  return null;
 }
 
 /**
@@ -854,198 +964,302 @@ export function apply(ctx, config = {}) {
         return;
       }
 
-      let tail = '';
-      let chars = 0;
-      let deltaCount = 0;
-      let maxRun = 0;
-      let maxIndex = -1;
-      let killed = false;
-      // 密度判据的累加器：把流里的完整行攒起来，统计「占位行」占比
-      let pendingLine = '';
-      const recentLines = [];
-      let placeLines = 0;
-      // 相邻对重复：判据换代后的主力信号（同一对行反复，才是死循环的形状）
-      let pairMax = 0;
-      // 英文判据的缓冲：行级判据看不见英文的口水，这里单独留一段尾巴做句级检查
-      let englishBuf = '';
-      let englishHit = false;
-      let englishWhy = '';
-      /** 连续几次采样都判退化；半截缓冲会抖，要两次才算数。 */
-      let englishStreak = 0;
-      let pairKey = "";
-      const pairCounts = new Map();
+      /**
+       * 一个推理块的判定状态。
+       *
+       * 为什么要按块分开（2026-11-26 外部评估第 1 条）：早先这些计数器是整个流的，
+       * 于是「14 行短句 + 一次真实 read + 14 行短句」被拼成 28 行连着的短行，
+       * 在真实工具已经转发出去之后又插一个假工具、还把原始 stop 吞掉。
+       * 现在块结束、切块各归各算；工具块或正文一出现，这条流就不再合成续接。
+       */
+      const freshBlock = () => ({
+        chars: 0, deltas: 0, tail: '', maxRun: 0,
+        pendingLine: '', recentLines: [], lineTotal: 0, placeTotal: 0,
+        pairCounts: new Map(), pairMax: 0, pairKey: '',
+        englishBuf: '', englishAt: -1e9, englishStreak: 0, englishHit: false, englishWhy: '',
+        cycleBuf: '', cycleAt: -1e9,
+      });
+      const blockState = new Map();
+      let activeBlock = 'none';
+      let st = freshBlock();
+      blockState.set(activeBlock, st);
+
       const isPlaceholder = (line) => MARK_LINE.test(line) || (line.length <= 4 && /^嗯[，,。]?$/.test(line));
+      /** 读一张工具表里有没有伪工具名；返回 null 表示这张表看不出结论。 */
+      const readToolList = (list) => {
+        if (Array.isArray(list)) {
+          return list.some((t) => (typeof t === 'string' ? t : (t?.name ?? t?.function?.name)) === cfg.fakeToolName);
+        }
+        if (list && typeof list === 'object') {
+          return Object.prototype.hasOwnProperty.call(list, cfg.fakeToolName);
+        }
+        return null;
+      };
+      /** 这一块是不是「真有产出」：正文或真实工具。 */
+      const isProgressChunk = (chunk) => {
+        switch (chunk?.type) {
+          case 'text-delta':
+          case 'tool-call-delta':
+            return true;
+          case 'block-start':
+            return chunk.blockType === 'text' || chunk.blockType === 'tool-call';
+          case 'block-end':
+            return chunk.block?.type === 'text' || chunk.block?.type === 'tool-call';
+          default:
+            return false;
+        }
+      };
+
+      let maxIndex = -1;
+      /** 本流是否已经有真实工具或正文进度。 */
+      let hasProgress = false;
+      let killed = false;
+      /** 判定过「掐不了 / 不该掐」以后，本流不再逐块重跑。 */
+      let killDisabled = false;
+      /** followup 投递失败过：本流不再重试，免得每个 chunk 都投一次。 */
+      let followupBroken = false;
+      let totalDeltas = 0;
+      const cycleWindow = Math.max(2048, Math.min(1 << 20, Math.floor(cfg.cycleWindow ?? 12288)));
+      const englishStep = Math.max(100, Math.floor(cfg.englishStep ?? 600));
+
       // 冷却：本会话短时间内掐太多次就先收手，别把正常会话砍成筛子
       const cooling = (cooldowns.get(key) ?? 0) > Date.now();
       if (cooling) trace("冷却中，本次只放行不掐 sid=" + String(sid).slice(0, 16));
-      for await (const chunk of next()) {
-        if (typeof chunk?.index === 'number' && chunk.index > maxIndex) maxIndex = chunk.index;
-        if (chunk?.type === 'reasoning-delta' && typeof chunk.text === 'string') {
-          chars += chunk.text.length;
-          deltaCount++;
-          tail = (tail + chunk.text).slice(-TAIL_CHARS);
-          englishBuf = (englishBuf + chunk.text).slice(-8000);
-          // —— 密度累加：按换行切出完整行 ——
-          pendingLine += chunk.text;
-          let nl = pendingLine.indexOf('\n');
-          while (nl >= 0) {
-            const line = pendingLine.slice(0, nl).trim();
-            pendingLine = pendingLine.slice(nl + 1);
-            if (line) {
-              if (recentLines.length > 0) {
-                const prev = recentLines[recentLines.length - 1];
-                const pk = prev + "|" + line;
-                const seen = (pairCounts.get(pk) ?? 0) + 1;
-                pairCounts.set(pk, seen);
-                if (seen > pairMax) {
-                  pairMax = seen;
-                  pairKey = prev + " / " + line;
-                }
-              }
-              recentLines.push(line);
-              if (isPlaceholder(line)) placeLines++;
-            }
-            nl = pendingLine.indexOf('\n');
+
+      /**
+       * 记一次掐断。**投递确认之后才调**——投递失败却先把冷却和连击记上，
+       * 等于「这一轮没断，但下一轮不许断」（2026-11-26 外部评估第 2 条）。
+       * @param {string} why - 带数字的原因，进日志。
+       */
+      const commitKill = (why) => {
+        killed = true;
+        log(`掐流：${why}，在 ${st.chars} 字符处收手`);
+        trace(`掐流命中 ${why} chars=${st.chars} streak=${streakBefore + 1}`);
+        killStreak.set(key, streakBefore + 1);
+        recordKill(key);
+      };
+
+      /**
+       * 吃一个推理增量：更新这个块的统计、判定、必要时掐断。
+       * @param {string} text - 增量文本。
+       * @returns {Promise<null | {kind: 'fast'|'slow', run: number, hint: string, whyText: string}>}
+       */
+      const observeReasoning = async (text) => {
+        st.chars += text.length;
+        st.deltas += 1;
+        totalDeltas += 1;
+        st.tail = (st.tail + text).slice(-TAIL_CHARS);
+        st.englishBuf = (st.englishBuf + text).slice(-ENGLISH_BUF);
+        st.cycleBuf = (st.cycleBuf + text).slice(-cycleWindow);
+
+        // —— 按换行切出完整行（密度 / 相邻对 / 掐断补偿都要用） ——
+        st.pendingLine += text;
+        for (let nl = st.pendingLine.indexOf('\n'); nl >= 0; nl = st.pendingLine.indexOf('\n')) {
+          const line = st.pendingLine.slice(0, nl).trim();
+          st.pendingLine = st.pendingLine.slice(nl + 1);
+          if (!line) continue;
+          const prev = st.recentLines[st.recentLines.length - 1];
+          if (prev !== undefined) {
+            const pk = prev + '|' + line;
+            const seen = (st.pairCounts.get(pk) ?? 0) + 1;
+            st.pairCounts.set(pk, seen);
+            if (seen > st.pairMax) { st.pairMax = seen; st.pairKey = prev + ' / ' + line; }
           }
-          const run = trailingShortRun(tail);
-          if (run > maxRun) {
-            maxRun = run;
-            if (run === 8) trace(`连续短行到 8 行（累计 ${chars} 字符），继续观察`);
-          }
-          const placeRatio = recentLines.length > 0 ? placeLines / recentLines.length : 0;
-          const repeatHit =
-            cfg.streamKillRepeatEnabled &&
-            recentLines.length >= cfg.streamKillRepeatMinLines &&
-            pairMax >= cfg.streamKillRepeatMin &&
-            placeRatio >= cfg.streamKillRepeatRatioMin &&
-            chars >= minChars;
-          const densityHit =
-            cfg.streamKillDensityEnabled &&
-            recentLines.length >= cfg.streamKillDensityMinLines &&
-            placeRatio >= cfg.streamKillDensityRatio &&
-            chars >= minChars;
-          const shortHit = run >= runThreshold && chars >= minChars;
-          if (cfg.streamKillEnglishEnabled && deltaCount % 20 === 0 && englishBuf.length > 600) {
-            const englishMetricsResult = englishMetrics(englishBuf.slice(-6000));
-            if (isEnglishDegenerate(englishMetricsResult, cfg)) {
-              englishStreak += 1;
-              englishWhy = '英文重复 句占比 ' + Math.round(englishMetricsResult.dupRatio * 100) + '% / 4词重复 ' + englishMetricsResult.gramMax + ' 次「' + englishMetricsResult.gramKey + '」';
-            } else {
-              englishStreak = 0;
-            }
+          st.recentLines.push(line);
+          if (st.recentLines.length > RECENT_LINES_MAX) st.recentLines.shift();
+          if (st.pairCounts.size > PAIR_COUNTS_MAX) st.pairCounts.clear();
+          st.lineTotal += 1;
+          if (isPlaceholder(line)) st.placeTotal += 1;
+        }
+
+        const run = trailingShortRun(st.tail);
+        if (run > st.maxRun) {
+          st.maxRun = run;
+          if (run === 8) trace(`连续短行到 8 行（累计 ${st.chars} 字符），继续观察`);
+        }
+
+        const forced = forceChars > 0 && st.chars >= forceChars;
+        if (!forced && (killDisabled || hasProgress || cooling)) return null;
+
+        const placeRatio = st.lineTotal > 0 ? st.placeTotal / st.lineTotal : 0;
+        const repeatHit =
+          cfg.streamKillRepeatEnabled &&
+          st.lineTotal >= cfg.streamKillRepeatMinLines &&
+          st.pairMax >= cfg.streamKillRepeatMin &&
+          placeRatio >= cfg.streamKillRepeatRatioMin &&
+          st.chars >= minChars;
+        const densityHit =
+          cfg.streamKillDensityEnabled &&
+          st.lineTotal >= cfg.streamKillDensityMinLines &&
+          placeRatio >= cfg.streamKillDensityRatio &&
+          st.chars >= minChars;
+        const shortHit = run >= runThreshold && st.chars >= minChars;
+
+        // 英文句级：按**已收字符数**采样。按 delta 个数走的话，同一段文本换个分片就是另一个结论
+        // （2026-11-26 外部评估第 3 条：11 字符分片误掐正常对照，256 字符分片整段放过）。
+        if (cfg.streamKillEnglishEnabled && !st.englishHit
+          && st.englishBuf.length > ENGLISH_MIN_BUF
+          && st.chars - st.englishAt >= englishStep) {
+          st.englishAt = st.chars;
+          const metrics = englishMetrics(st.englishBuf);
+          if (isEnglishDegenerate(metrics, cfg)) {
+            st.englishStreak += 1;
+            st.englishWhy = `英文重复 同一句占 ${Math.round(metrics.dupRatio * 100)}%（句首 4 词 ${metrics.gramMax} 次「${metrics.gramKey}」只作观察）`;
             // 只超阈一次不算：半截缓冲的分母还在长，占比会虚高（2026-11-25 那次误伤就是单次采样）
-            if (englishStreak >= 2) englishHit = true;
-          }
-          const forceHit = forceChars > 0 && chars >= forceChars;
-          if (forceHit || (!cooling && (englishHit || repeatHit || densityHit || shortHit))) {
-            const why = forceHit
-              ? '强制'
-              : englishHit
-                ? englishWhy
-              : repeatHit
-                ? '重复对 ' + pairMax + ' 次「' + pairKey + '」占位 ' + Math.round(placeRatio * 100) + '%'
-                : densityHit
-                  ? `密度 ${placeLines}/${recentLines.length}`
-                  : `连续 ${run} 行`;
-            /** 给模型看的人话原因；日志里的 why 带数字，不适合直接嵌进提示。 */
-            const whyText = forceHit
-              ? '测试强制触发'
-              : englishHit
-                ? '英文句子里反复写同一句'
-                : repeatHit
-                  ? '同一对行来回写'
-                  : densityHit
-                    ? '占位行太密'
-                    : `连着写了 ${run} 行短句`;
-            // 掐之前先确认「掐完能不能接上」：快断看当前请求的工具表，慢续要有 followup。
-            // 两样都确认不了就不掐——白掐一轮还没人接，比不掐更糟（2026-11-25 外部评估）。
-            const readToolList = (list) => {
-              if (Array.isArray(list)) {
-                return list.some((t) => (typeof t === 'string' ? t : (t?.name ?? t?.function?.name)) === cfg.fakeToolName);
-              }
-              if (list && typeof list === 'object') {
-                return Object.prototype.hasOwnProperty.call(list, cfg.fakeToolName);
-              }
-              return null;
-            };
-            // 当前请求带的工具表最权威：它就是「这一步真的能调什么」
-            let fakeToolState = readToolList(options?.tools);
-            if (fakeToolState === null) {
-              const probe = sessionAgents.get(key);
-              for (const list of [probe?.tools, probe?.toolNames, probe?.session?.tools, probe?.session?.toolNames]) {
-                const state = readToolList(list);
-                if (state !== null) { fakeToolState = state; break; }
-              }
-            }
-            const canFast = useFastContinue && fakeToolState === true;
-            const agentRef = sessionAgents.get(key);
-            const canFollow = Boolean(
-              cfg.followupFallback
-              && typeof cfg.afterKillText === 'string' && cfg.afterKillText.length > 0
-              && agentRef && typeof agentRef.followup === 'function',
-            );
-
-            if (cfg.streamKillDryRun) {
-              log(`[试运行] 该掐了：${why}，已生成 ${chars} 字符`);
-              trace(`试运行命中 ${why} chars=${chars}，快断=${canFast} 慢续=${canFollow}`);
-              tail = '';
-            } else if (!canFast && !canFollow) {
-              trace(`掐了也没人接（${cfg.fakeToolName} ${fakeToolState === false ? '不在工具表' : '未确认'}，followup 不可用），放行本次生成；原因 ${why}`);
-              tail = '';
-            } else {
-              killed = true;
-              log(`掐流：${why}，在 ${chars} 字符处收手`);
-              trace(`掐流命中 ${why} chars=${chars} streak=${streakBefore + 1}`);
-              killStreak.set(key, streakBefore + 1);
-              recordKill(key);
-              const hint = buildCompensation(recentLines, cfg);
-              if (hint) trace("掐断补偿：" + hint.length + " 字（原文不入日志）");
-
-              // 快速续轮：伪造一个只读工具调用，把 finish 改成 tool-calls。
-              // 这一轮于是不会结束，直接进下一步（延迟 <1s），下一步的 pre-step 再注入提示。
-              if (canFast) {
-                const fakeIndex = maxIndex + 1;
-                const fakeId = `call_${randomUUID()}`;
-                const fakeName = cfg.fakeToolName;
-                const fakeArgs = '{}';
-                trace(`伪造工具调用 ${fakeName}（index=${fakeIndex}）让本轮直接进下一步`);
-                yield { type: 'block-start', index: fakeIndex, blockType: 'tool-call' };
-                yield { type: 'tool-call-delta', index: fakeIndex, id: fakeId, name: fakeName, argumentsDelta: fakeArgs };
-                yield { type: 'block-end', index: fakeIndex, block: { type: 'tool-call', id: fakeId, name: fakeName, arguments: fakeArgs } };
-                yield { type: 'finish', reason: { kind: 'tool-calls' } };
-                // 让下一步的 pre-step 注入「你被截断了」（伪造路径没有投递消息，只能靠它）
-                killedSessions.set(key, { run, chars, hint, reason: whyText });
-                return;
-              }
-
-              // 慢速续轮（兜底）：用 followup 投一条消息，等 turn 收尾后自己起新的一轮。
-              let continued = false;
-              if (cfg.followupFallback && cfg.afterKillText.length > 0) {
-                if (agentRef && typeof agentRef.followup === 'function') {
-                  try {
-                    const followText = String(cfg.afterKillText).replace(/\{reason\}/g, whyText);
-                    agentRef.followup(buildUserMessage({
-                      content: [{ type: 'text', text: followText }],
-                      source: { kind: 'plugin:' + name },
-                    }));
-                    continued = true;
-                    trace('已用 followup 续一轮');
-                  } catch (error) {
-                    trace(`followup 失败 ${String(error)}`);
-                  }
-                } else {
-                  trace('没有缓存的 agent，掐断后不会自动续（该会话还没走过 pre-step）');
-                }
-              }
-              if (!continued) killedSessions.set(key, { run, chars, hint, reason: whyText });
-              break;
-            }
+            if (st.englishStreak >= 2) st.englishHit = true;
+          } else {
+            st.englishStreak = 0;
           }
         }
+
+        // 精确周期：跟语言、断行、标点都无关的那条判据。
+        // 和别的判据一样服从字符下限——短步骤里就算真有重复也不掐（用户设的 streamKillMinChars）。
+        let cycle = null;
+        if (cfg.streamKillCycleEnabled && st.chars >= minChars && st.chars - st.cycleAt >= cfg.cycleStep) {
+          st.cycleAt = st.chars;
+          cycle = tailCycle(stripStructuralLines(st.cycleBuf), cfg);
+        }
+
+        const englishHit = st.englishHit;
+        if (!forced && !cycle && !englishHit && !repeatHit && !densityHit && !shortHit) return null;
+
+        const why = forced
+          ? '强制'
+          : cycle
+            ? `精确周期 ${cycle.period} 字 × ${cycle.repeats} 遍`
+            : englishHit
+              ? st.englishWhy
+              : repeatHit
+                ? '重复对 ' + st.pairMax + ' 次「' + st.pairKey + '」占位 ' + Math.round(placeRatio * 100) + '%'
+                : densityHit
+                  ? `密度 ${st.placeTotal}/${st.lineTotal}`
+                  : `连续 ${run} 行`;
+        /** 给模型看的人话原因；日志里的 why 带数字，不适合直接嵌进提示。 */
+        const whyText = forced
+          ? '测试强制触发'
+          : cycle
+            ? '同一段内容在反复重写'
+            : englishHit
+              ? '英文句子里反复写同一句'
+              : repeatHit
+                ? '同一对行来回写'
+                : densityHit
+                  ? '占位行太密'
+                  : `连着写了 ${run} 行短句`;
+
+        // 掐之前先确认「掐完能不能接上」：快断看当前请求的工具表，慢续要有 followup。
+        // 两样都确认不了就不掐——白掐一轮还没人接，比不掐更糟（2026-11-25 外部评估）。
+        let fakeToolState = readToolList(options?.tools);
+        if (fakeToolState === null) {
+          const probe = sessionAgents.get(key);
+          for (const list of [probe?.tools, probe?.toolNames, probe?.session?.tools, probe?.session?.toolNames]) {
+            const state = readToolList(list);
+            if (state !== null) { fakeToolState = state; break; }
+          }
+        }
+        const canFast = useFastContinue && fakeToolState === true;
+        const agentRef = sessionAgents.get(key);
+        const canFollow = Boolean(
+          !followupBroken
+          && cfg.followupFallback
+          && typeof cfg.afterKillText === 'string' && cfg.afterKillText.length > 0
+          && agentRef && typeof agentRef.followup === 'function',
+        );
+
+        if (cfg.streamKillDryRun) {
+          log(`[试运行] 该掐了：${why}，已生成 ${st.chars} 字符`);
+          trace(`试运行命中 ${why} chars=${st.chars}，快断=${canFast} 慢续=${canFollow}`);
+          killDisabled = true;                       // 一个流记一次就够，别每块刷屏
+          return null;
+        }
+        if (!canFast && !canFollow) {
+          killDisabled = true;
+          trace(`掐了也没人接（${cfg.fakeToolName} ${fakeToolState === false ? '不在工具表' : '未确认'}，followup 不可用），放行本次生成；原因 ${why}`);
+          return null;
+        }
+
+        const hint = buildCompensation(st.recentLines, cfg);
+        if (canFast) {
+          commitKill(why);
+          if (hint) trace("掐断补偿：" + hint.length + " 字（原文不入日志）");
+          return { kind: 'fast', run, hint, whyText };
+        }
+
+        // 慢速续轮：**投递成功才算掐断**。同步抛错、或者返回的 Promise 被拒，
+        // 都按「这次没掐」处理——原流继续透传，原来的 stop 也照常到上层。
+        const followText = String(cfg.afterKillText).replace(/\{reason\}/g, whyText);
+        try {
+          const maybe = agentRef.followup(buildUserMessage({
+            content: [{ type: 'text', text: followText }],
+            source: { kind: 'plugin:' + name },
+          }));
+          // 宿主要是有可等待的投递确认，就按它的契约等；没有就当作已投
+          if (maybe && typeof maybe.then === 'function') await maybe;
+        } catch (error) {
+          followupBroken = true;
+          killDisabled = true;
+          trace(`followup 投递失败，本次不掐断、原流继续：${String(error)}`);
+          log(`慢速续轮没投出去，这一次不掐断（原生成继续）：${error?.message ?? String(error)}`);
+          return null;
+        }
+        commitKill(why);
+        if (hint) trace("掐断补偿：" + hint.length + " 字（原文不入日志）");
+        trace('已用 followup 续一轮');
+        return { kind: 'slow', run, hint, whyText };
+      };
+      for await (const chunk of next()) {
+        const idx = typeof chunk?.index === 'number' ? chunk.index : null;
+        if (idx !== null && idx > maxIndex) maxIndex = idx;
+
+        // —— 推理块隔离：换块就换一套状态，块结束就把这套状态扔掉 ——
+        if (idx !== null) {
+          if (chunk?.type === 'block-start' && chunk.blockType === 'reasoning') {
+            activeBlock = idx;
+            st = freshBlock();
+            blockState.set(idx, st);
+          } else if (idx !== activeBlock) {
+            activeBlock = idx;
+            st = blockState.get(idx) ?? freshBlock();
+            blockState.set(idx, st);
+          }
+        }
+        if (chunk?.type === 'block-end' && chunk.block?.type === 'reasoning') {
+          const done = idx ?? activeBlock;
+          blockState.delete(done);
+          if (done === activeBlock) { st = freshBlock(); blockState.set(activeBlock, st); }
+        }
+
+        // —— 真实进度：之后一律不做合成续接，原始终止事件照常透传 ——
+        if (!hasProgress && isProgressChunk(chunk)) {
+          hasProgress = true;
+          trace('本流已有真实工具/正文进度，之后不再判定（原始终止事件照常透传）');
+        }
+
+        const action = chunk?.type === 'reasoning-delta' && typeof chunk.text === 'string'
+          ? await observeReasoning(chunk.text)
+          : null;
+
+        if (action?.kind === 'fast') {
+          // 快速续轮：伪造一个只读工具调用，把 finish 改成 tool-calls。
+          // 这一轮于是不会结束，直接进下一步（延迟 <1s），下一步的 pre-step 再注入提示。
+          const fakeIndex = maxIndex + 1;
+          const fakeId = `call_${randomUUID()}`;
+          const fakeName = cfg.fakeToolName;
+          const fakeArgs = '{}';
+          trace(`伪造工具调用 ${fakeName}（index=${fakeIndex}）让本轮直接进下一步`);
+          yield { type: 'block-start', index: fakeIndex, blockType: 'tool-call' };
+          yield { type: 'tool-call-delta', index: fakeIndex, id: fakeId, name: fakeName, argumentsDelta: fakeArgs };
+          yield { type: 'block-end', index: fakeIndex, block: { type: 'tool-call', id: fakeId, name: fakeName, arguments: fakeArgs } };
+          yield { type: 'finish', reason: { kind: 'tool-calls' } };
+          // 让下一步的 pre-step 注入「你被截断了」（伪造路径没有投递消息，只能靠它）
+          killedSessions.set(key, { run: action.run, chars: st.chars, hint: action.hint, reason: action.whyText });
+          return;
+        }
+        if (action?.kind === 'slow') break;
         yield chunk;
       }
       if (!killed) killStreak.delete(key);
-      trace(`stream 结束 killed=${killed} deltas=${deltaCount} chars=${chars} maxRun=${maxRun}`);
+      trace(`stream 结束 killed=${killed} deltas=${totalDeltas} chars=${st.chars} maxRun=${st.maxRun}`);
       if (killed) log('本次生成已提前结束（上层按正常 stop 处理）');
     });
   }
