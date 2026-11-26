@@ -4,10 +4,10 @@
 
 <p align="center">
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-2dd4bf"></a>
-  <a href="package.json"><img alt="Node" src="https://img.shields.io/badge/node-%3E%3D20-60a5fa"></a>
+  <a href="package.json"><img alt="Node" src="https://img.shields.io/badge/node-%3E%3D22.15-60a5fa"></a>
   <a href="package.json"><img alt="DSH" src="https://img.shields.io/badge/DSH-%E2%89%A50.2.0--rc.1-a78bfa"></a>
-  <img alt="tests" src="https://img.shields.io/badge/tests-80%20passing-4ade80">
-  <img alt="version" src="https://img.shields.io/badge/version-2.0.3-f59e0b">
+  <img alt="tests" src="https://img.shields.io/badge/tests-120%20passing-4ade80">
+  <img alt="version" src="https://img.shields.io/badge/version-2.3.2-f59e0b">
 </p>
 
 <p align="center">
@@ -164,10 +164,11 @@
 
 > 熔断（原第五档）已下线：它直接杀掉整轮，而冷却窗已经能挡住连环空转。`stop_sequences` 同样下线——两样的代码都还在，只是门槛抬到了界面够不着的地方。
 
-还有两条防误伤的保护，同样不在档位上：
+还有两条保护，同样不在档位上。**两条默认都是关的**——曾把它们当默认行为，实测发现那是在帮倒忙：
 
-- **冷却窗**：同一个会话 10 分钟内被掐到 3 次，就歇 5 分钟只放行不掐——别把正常会话砍成筛子
-- **掐断补偿**：掐断时把被掐段最后几句真实内容带进注入提示，模型下一轮不用从头重想
+- **冷却窗**（`cooldownHits` 默认 `0` = 不冷却）：原设计是同一会话 10 分钟内被掐到 3 次就歇 5 分钟。实测：爆发是**成串的**（相邻爆发间隔 ≤3 轮的占 79%～94%），冷却期正好盖在最该掐的那几十轮上，把效果砍掉 19–56 倍。想保守就把 `cooldownHits` 调回 3
+- **连掐停手**（`maxKillStreak` 默认 `0` = 不限）：同上，连续掐断不是误伤，是它正在发作
+- **掐断补偿**：掐断时把被掐段最后几句真实内容带进注入提示，模型下一轮不用从头重想（这条是开着的）
 
 <p align="center">
   <img src="assets/head/install.svg" alt="" width="880">
@@ -400,17 +401,21 @@ node scripts/analyze.mjs --json    # 机读
 输出长这样：
 
 ```
-=== 空转（占位≥10 行 且 ≥20% 的块）===
-块         445（3.99%）
-字符       391,845（占全部思考的 1.13%）
+=== 空转嫌疑（占位≥10 行 且 ≥20%，只用来圈样本）===
+块         445（2.46%）
+字符       391,845（占全部思考的 1.00%）
 
-=== 插件能抓住多少 ===
-块         366 / 445（82.25%）
-字符       319,765 / 391,845（81.60%）
+=== 实测动作（快断档：会掐吗）===
+全部触发   347 块 / 315,104 字符 —— 判据在整个语料上真正动手的次数
+嫌疑块命中 347 / 445（77.98%）
+嫌疑块字符 315,104 / 391,845（80.42%）
+嫌疑圈外   0 块被掐 —— 不在「占位嫌疑」里，是靠周期/英文等其它判据抓到的
 
 === 最值得看的会话 ===
-f2dfc169  528 块  493,572 字  空转 215 块  能抓 177  空转占该会话 28.24%
+f2dfc169  583 块  501,592 字  嫌疑 215 块  命中 169  全部触发 169  占该会话 27.79%
 ```
+
+注意「全部触发」和「嫌疑块命中」是**两个不同的数**：纯 `</assistant>` 复读、英文句重复这类块占位行是 0，落在嫌疑圈外，只有「全部触发」能记到它们。只看命中率会以为插件没动。
 
 ### 这套阈值过拟合了吗
 

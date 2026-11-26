@@ -78,9 +78,18 @@ if (!fs.existsSync(ROOT)) {
   process.exit(1);
 }
 
+// zstd 解压要 Node 22.15 / 23.8 才开始有；包声明支持更老的版本，所以这里自己探一次，
+// 否则用户会看到一堆「读取失败」而不知道真正的原因是 Node 太老。
+if (typeof z.zstdDecompressSync !== 'function') {
+  console.error(`这个 Node 没有 zstd 解压能力（当前 ${process.versions.node}）`);
+  console.error('会话日志是 .zstd，需要 Node ≥ 22.15 或 ≥ 23.8。');
+  process.exit(1);
+}
+
 // ---------- 读语料 ----------
 const files = [];
-let unreadable = 0;
+let unreadable = 0;      // 读不出来 / 解不开 / 一帧都没有的文件
+let unreadableSample = null;
 (function walk(dir) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
@@ -90,23 +99,30 @@ let unreadable = 0;
 })(ROOT);
 
 const blocks = [];        // { sid, text }
-let skippedEvents = 0;    // 读到了但不认识的记录类型计数（只报数，不解析）
+let skippedRecords = 0;   // 解析不了 / 不是对象 / 结构不认识的记录
 for (const file of files) {
-  let text = '';
+  let text = null;
   try {
     const buf = fs.readFileSync(file);
-    text = Buffer.concat(frames(buf).map(([s, e]) => z.decompressSync ? z.decompressSync : z.zstdDecompressSync(buf.subarray(s, e)))).toString('utf8');
-  } catch {
+    const parts = frames(buf);
+    // 帧都切不出来（文件头坏了、或根本不是 zstd）也算读失败——
+    // 以前这里会 Buffer.concat([]) 得到空串，静默当成「这个会话没有内容」。
+    if (parts.length === 0) throw new Error('no zstd frames');
+    text = Buffer.concat(parts.map(([s, e]) => z.zstdDecompressSync(buf.subarray(s, e)))).toString('utf8');
+  } catch (err) {
     unreadable += 1;
+    if (!unreadableSample) unreadableSample = { file: path.basename(path.dirname(file)), error: String(err && err.message || err) };
     continue;
   }
   const sid = path.basename(path.dirname(file)).replace(/^session-/, '').slice(0, 8);
   for (const line of text.split('\n')) {
     if (!line.trim()) continue;
-    let ev; try { ev = JSON.parse(line); } catch { skippedEvents += 1; continue; }
+    let ev; try { ev = JSON.parse(line); } catch { skippedRecords += 1; continue; }
+    // 合法的 `null` 也是一条能 parse 成功的记录；不挡住会让整次扫描抛 TypeError 退出。
+    if (!ev || typeof ev !== 'object') { skippedRecords += 1; continue; }
     if (ev.type !== 'assistant/message') continue;
     const content = (ev.data?.message ?? ev.message)?.content;
-    if (!Array.isArray(content)) { skippedEvents += 1; continue; }
+    if (!Array.isArray(content)) { skippedRecords += 1; continue; }
     for (const b of content) {
       if (b?.type !== 'reasoning' || typeof b.text !== 'string' || !b.text) continue;
       blocks.push({ sid, text: b.text });
@@ -176,12 +192,23 @@ function isBad(text) {
 }
 
 const perSession = new Map();
-const total = { blocks: 0, chars: 0, badBlocks: 0, badChars: 0, caughtBlocks: 0, caughtChars: 0 };
+const total = {
+  blocks: 0, chars: 0,
+  badBlocks: 0, badChars: 0,
+  caughtBlocks: 0, caughtChars: 0,        // 嫌疑块里的打断（命中率的分母只含嫌疑块）
+  allCutBlocks: 0, allCutChars: 0,        // 全部回放里触发打断的（含不在嫌疑块里的：周期循环、协议标签等）
+  cleanCutBlocks: 0,                      // 不在嫌疑块里却被掐的——这是判据打到嫌疑圈外的量
+};
 for (const r of results) {
   const bad = isBad(r.text);
-  const row = perSession.get(r.sid) ?? { sid: r.sid, blocks: 0, chars: 0, badBlocks: 0, badChars: 0, caughtBlocks: 0, caughtChars: 0 };
+  const row = perSession.get(r.sid) ?? { sid: r.sid, blocks: 0, chars: 0, badBlocks: 0, badChars: 0, caughtBlocks: 0, caughtChars: 0, allCut: 0 };
   total.blocks += 1; total.chars += r.text.length;
   row.blocks += 1; row.chars += r.text.length;
+  if (r.cut) {
+    total.allCutBlocks += 1; total.allCutChars += r.text.length;
+    row.allCut += 1;
+    if (!bad) total.cleanCutBlocks += 1;
+  }
   if (bad) {
     total.badBlocks += 1; total.badChars += r.text.length;
     row.badBlocks += 1; row.badChars += r.text.length;
@@ -202,13 +229,19 @@ const fmt = (n) => n.toLocaleString('en-US');
 if (asJson) {
   console.log(JSON.stringify({
     root: ROOT, mode: fast ? 'estimate' : 'replay',
-    coverage: { sessionFiles: files.length, unreadable, blocks: results.length, skippedRecords: skippedEvents },
+    coverage: {
+      sessionFiles: files.length, unreadable, blocks: results.length,
+      skippedRecords, unreadableSample,
+    },
     total, sessions: sessions.slice(0, TOP),
   }, null, 2));
 } else {
   console.log(`语料目录   ${ROOT}`);
   console.log(`口径       ${fast ? '估算（纯占位密度统计，不跑流式检测器）' : '实跑（每块按 64 字符切片喂进插件，看真掐不掐）'}`);
-  console.log(`覆盖       ${files.length} 个会话文件，读到 ${fmt(results.length)} 个推理块${unreadable ? `，${unreadable} 个文件读取失败` : ''}${skippedEvents ? `，${skippedEvents} 条记录无法解析` : ''}`);
+  console.log(`覆盖       ${files.length} 个会话文件，读到 ${fmt(results.length)} 个推理块`);
+  if (unreadable) console.log(`           读失败 ${unreadable} 个文件${unreadableSample ? `（例：${unreadableSample.file}，${unreadableSample.error}）` : ''}`);
+  if (skippedRecords) console.log(`           跳过 ${fmt(skippedRecords)} 条记录（解析不了或结构不认识）`);
+  if (!unreadable && !skippedRecords) console.log('           没有读失败的文件，也没有跳过的记录');
   console.log('');
   console.log('=== 规模 ===');
   console.log(`思考块     ${fmt(total.blocks)}`);
@@ -219,13 +252,16 @@ if (asJson) {
   console.log(`字符       ${fmt(total.badChars)}（占全部思考的 ${pct(total.badChars, total.chars)}）`);
   console.log('');
   console.log(`=== ${fast ? '预计' : '实测'}动作（快断档：会掐吗）===`);
-  console.log(`按块       ${fmt(total.caughtBlocks)} / ${fmt(total.badBlocks)}（${pct(total.caughtBlocks, total.badBlocks)}）`);
-  console.log(`按字符     ${fmt(total.caughtChars)} / ${fmt(total.badChars)}（${pct(total.caughtChars, total.badChars)}）`);
+  console.log(`全部触发   ${fmt(total.allCutBlocks)} 块 / ${fmt(total.allCutChars)} 字符 —— 判据在整个语料上真正动手的次数`);
+  console.log(`嫌疑块命中 ${fmt(total.caughtBlocks)} / ${fmt(total.badBlocks)}（${pct(total.caughtBlocks, total.badBlocks)}）`);
+  console.log(`嫌疑块字符 ${fmt(total.caughtChars)} / ${fmt(total.badChars)}（${pct(total.caughtChars, total.badChars)}）`);
+  console.log(`嫌疑圈外   ${fmt(total.cleanCutBlocks)} 块被掐 —— 它们不在「占位嫌疑」里，是靠周期/英文等其它判据抓到的`);
+  console.log('           （只看「嫌疑块命中」会漏掉这一类，所以两个数都要看）');
   console.log('');
   console.log(`=== 最值得看的 ${Math.min(TOP, sessions.length)} 个会话 ===`);
-  console.log('会话      块数   字符      嫌疑块  嫌疑字符  实掐   占该会话');
+  console.log('会话      块数   字符      嫌疑块  嫌疑字符  命中   全部触发  占该会话');
   for (const r of sessions.slice(0, TOP)) {
-    console.log(`${r.sid}  ${String(r.blocks).padStart(5)}  ${fmt(r.chars).padStart(9)}  ${String(r.badBlocks).padStart(6)}  ${fmt(r.badChars).padStart(8)}  ${String(r.caughtBlocks).padStart(4)}   ${pct(r.badChars, r.chars)}`);
+    console.log(`${r.sid}  ${String(r.blocks).padStart(5)}  ${fmt(r.chars).padStart(9)}  ${String(r.badBlocks).padStart(6)}  ${fmt(r.badChars).padStart(8)}  ${String(r.caughtBlocks).padStart(4)}   ${String(r.allCut).padStart(6)}     ${pct(r.badChars, r.chars)}`);
   }
   console.log('');
   console.log('注 1：整理档不打断生成，只剥离占位行；上面是快断档的行为。');

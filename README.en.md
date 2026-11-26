@@ -4,10 +4,10 @@
 
 <p align="center">
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-2dd4bf"></a>
-  <a href="package.json"><img alt="Node" src="https://img.shields.io/badge/node-%3E%3D20-60a5fa"></a>
+  <a href="package.json"><img alt="Node" src="https://img.shields.io/badge/node-%3E%3D22.15-60a5fa"></a>
   <a href="package.json"><img alt="DSH" src="https://img.shields.io/badge/DSH-%E2%89%A50.2.0--rc.1-a78bfa"></a>
-  <img alt="tests" src="https://img.shields.io/badge/tests-80%20passing-4ade80">
-  <img alt="version" src="https://img.shields.io/badge/version-2.0.3-f59e0b">
+  <img alt="tests" src="https://img.shields.io/badge/tests-120%20passing-4ade80">
+  <img alt="version" src="https://img.shields.io/badge/version-2.3.2-f59e0b">
 </p>
 
 <p align="center">
@@ -162,7 +162,7 @@ That layer is what breaks the self-reinforcement loop — the model sees what it
 | 2 | Slow | Tier 1 + cuts a real loop, then resumes via followup | waits 7–21 s, history stays clean |
 | 3 | Fast | Tier 1 + cuts, then synthesizes a read-only call so the turn keeps going | a fake record in history, latency under 1 s |
 
-> The fuse tier (the old fifth) is retired — it killed the whole turn, and the cooldown window already stops cascades. `stop_sequences` went the same way. Both still exist in code, but their thresholds now sit where the interface cannot reach.
+> The fuse tier (the old fifth) is retired — it killed the whole turn, and a cut should never be more destructive than the loop. `stop_sequences` went the same way. Both still exist in code, but their thresholds now sit where the interface cannot reach.
 
 Two more guards, also not on the glyph:
 

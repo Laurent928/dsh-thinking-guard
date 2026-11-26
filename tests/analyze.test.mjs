@@ -88,3 +88,46 @@ test('analyze：没有会话目录时报错退出，不崩栈', () => {
     execFileSync(process.execPath, [SCRIPT, path.join(os.tmpdir(), 'definitely-not-here-' + Date.now())], { encoding: 'utf8', stdio: 'pipe' });
   }, /Command failed|status 1/);
 });
+
+test('analyze：只含 </assistant> 复读的块——实跑会掐，但它不在占位嫌疑圈里，两个数都要报', () => {
+  // 来自 2026-11-26 外部复核：纯周期循环能被流式检测抓到，但占位行是 0，落在「空转嫌疑」圈外。
+  // 旧报表只在嫌疑块里累计打断数，于是这种块显示 0 次。
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'tg-cycle-'));
+  try {
+    const sessionDir = path.join(root, 'ws', 'session-cycle1234');
+    fs.mkdirSync(sessionDir, { recursive: true });
+    const cycle = Array.from({ length: 30 }, () => '</assistant>').join('\n');
+    const event = {
+      type: 'assistant/message', seq: 1, time: Date.now(),
+      data: { turn: 1, step: 1, message: { role: 'assistant', id: 'm1', content: [{ type: 'reasoning', text: cycle }], source: { kind: 'model' } } },
+    };
+    fs.writeFileSync(path.join(sessionDir, 'session.v4.jsonl.zstd'), zlib.zstdCompressSync(Buffer.from(JSON.stringify(event) + '\n', 'utf8')));
+    const report = JSON.parse(execFileSync(process.execPath, [SCRIPT, root, '--json'], { encoding: 'utf8' }));
+    assert.equal(report.total.badBlocks, 0, '它的占位行是 0，不该进嫌疑圈');
+    assert.ok(report.total.allCutBlocks >= 1, '但实跑确实应该掐它——「全部触发」必须记到');
+    assert.ok(report.total.cleanCutBlocks >= 1, '并且要单独报出「嫌疑圈外被掐」的数量');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('analyze：坏文件与坏记录都要计数，不能静默吞掉', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'tg-bad-'));
+  try {
+    const dir = path.join(root, 'ws', 'session-bad12345');
+    fs.mkdirSync(dir, { recursive: true });
+    // ① 根本不是 zstd 的文件（一帧都切不出来）
+    fs.writeFileSync(path.join(dir, 'session.v4.jsonl.zstd'), Buffer.from('这不是 zstd 文件', 'utf8'));
+    // ② 合法但内容为 null 的记录——旧版会在 ev.type 上抛 TypeError 整次退出
+    const dir2 = path.join(root, 'ws', 'session-null1234');
+    fs.mkdirSync(dir2, { recursive: true });
+    fs.writeFileSync(path.join(dir2, 'session.v4.jsonl.zstd'), zlib.zstdCompressSync(Buffer.from('null\n{"type":"其它"}\n', 'utf8')));
+    const report = JSON.parse(execFileSync(process.execPath, [SCRIPT, root, '--json'], { encoding: 'utf8' }));
+    assert.equal(report.coverage.unreadable, 1, '切不出帧的文件要算读失败');
+    assert.ok(report.coverage.unreadableSample, '并且要给一个样本，方便用户自己看是哪个文件');
+    assert.equal(report.coverage.skippedRecords, 1, 'null 这种「能 parse 但不是对象」的记录要计入跳过数（其它 type 是正常记录，不该算）');
+    assert.equal(report.total.blocks, 0, '两个文件里都没有可用的推理块');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

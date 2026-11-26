@@ -1,6 +1,6 @@
 {
   "name": "dsh-thinking-guard",
-  "version": "2.3.1",
+  "version": "2.3.2",
   "description": "Reasoning-loop guard: strips the placeholder lines (做。/好。) that models fall into inside the thinking channel, keeps every real sentence, and only cuts a genuine loop.",
   "type": "module",
   "license": "MIT",
@@ -43,7 +43,7 @@
     "analyze": "node scripts/analyze.mjs"
   },
   "engines": {
-    "node": ">=20",
+    "node": ">=22.15",
     "dsh": ">=0.2.0-rc.1 <0.3.0-0"
   }
 }
