@@ -589,18 +589,19 @@ profile patch 里可覆盖任意一项
 | `englishGramMin` | `10` | 句首 4 个词重复的**观察**下限。2026-11-26 起不参与掐断：它分不开「同一组句子反复」和「同一句式逐条列举」 |
 | `englishGramMinSentences` | `20` | 同上，句数下限 |
 | `englishGramRatioMin` | `0.10` | 同上，同构句占比下限 |
-| `streamKillDensityEnabled` | `false` | 密度判据（按**行数**算占比）。**2026-11-24 夜默认关**：一行「做。」只有 2 个字，26% 的行只占 3% 的字——真机上 21 分钟砍了 11 次正常思考，全库看它单独多抓 199 块、真死循环 0 块 |
-| `streamKillDensityMinLines` | `30` | 至少这么多行才看密度（该判据已默认关） |
-| `streamKillDensityRatio` | `0.25` | 占位行占比达到这个值就判（已默认关，留作对照） |
-| `cooldownWindowMs` | `600000` | 冷却窗长度：这么久以内数一数掐了几次 |
-| `cooldownHits` | `3` | 窗口内掐到这么多次就进冷却；0 = 不冷却 |
+| `streamKillDensityEnabled` | `true` | 密度判据（按**行数**算占比）。2026-11-24 曾默认关（一行「做。」只有 2 个字，26% 的行只占 3% 的字），2026-11-26 **重新打开**——关着的时候真实召回只剩 45.8%，而漏掉的主力形态是「填充均匀撒开、最长连续才 11 行」 | 
+| `streamKillDensityMinLines` | `20` | 至少这么多行才看密度 |
+| `streamKillDensityRatio` | `0.25` | 占位行占比达到这个值就判 |
+| `streamKillDensityMinPlaceholders` | `12` | 占位行的**绝对条数**下限。12 是「误掐为零的最激进点」（1.1 万块端到端回放），再松一格就开始砍 game 会话的正常方案讨论 |
+| `cooldownWindowMs` | `600000` | 冷却窗长度：这么久以内数一数掐了几次（默认不冷却，此值仅在 `cooldownHits` > 0 时生效） |
+| `cooldownHits` | `0` | 窗口内掐到这么多次就进冷却；**默认 0 = 不冷却**——爆发是成串的，冷却期正好盖在最该掐的那几十轮上 |
 | `cooldownMs` | `300000` | 冷却时长：这段时间只放行不掐 |
 | `compensateEnabled` | `true` | 掐断补偿：把被掐那段最后几句真话带回注入提示 |
 | `compensateMaxLines` | `3` | 带回去几行 |
 | `compensateMaxChars` | `240` | 带回去的字数上限 |
 | `streamKillDryRun` | `false` | 试运行：只记「本该掐」不真掐，用来验判据 |
 | `afterKillText` | 一句中文 | 掐断后给模型的提示；空 = 不提示 |
-| `maxKillStreak` | `3` | 同一会话连续掐断这么多次就自动停手，防「掐→重想→再掐」；0 = 不限 |
+| `maxKillStreak` | `0` | 同一会话连续掐断这么多次就自动停手，防「掐→重想→再掐」。**默认 0 = 不限**：真实数据显示连续掐断不是误伤，是它正在发作（5 个会话的爆发相邻间隔 ≤3 轮的占 79%～94%） |
 | `streamKillFastContinue` | `true` | 档 ≥3 时走伪造续轮（<1 秒）；false = 一律走 followup 慢速路 |
 | `fakeToolName` | `get_goal` | 伪造续轮时用的工具名，要求只读、幂等 |
 | `followupFallback` | `true` | 慢速路：用 agent.followup 投消息起下一轮 |

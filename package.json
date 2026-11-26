@@ -1,6 +1,6 @@
 {
   "name": "dsh-thinking-guard",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "description": "Reasoning-loop guard: strips the placeholder lines (做。/好。) that models fall into inside the thinking channel, keeps every real sentence, and only cuts a genuine loop.",
   "type": "module",
   "license": "MIT",
@@ -23,6 +23,7 @@
   "files": [
     "src/",
     "lib/",
+    "scripts/",
     "cordis.patch.yml",
     "dsh.plugin.json",
     "README.md",

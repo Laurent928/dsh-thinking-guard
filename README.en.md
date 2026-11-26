@@ -565,16 +565,19 @@ Any key can be overridden from the profile patch
 | `englishGramMin` | `10` | **Observation** threshold for the four-word opener. Since 2026-11-26 it never cuts: it cannot tell a repeated set of sentences from a same-shaped checklist |
 | `englishGramMinSentences` | `20` | Same, sentence-count floor |
 | `englishGramRatioMin` | `0.10` | Same, share-of-sentences floor |
-| `streamKillDensityEnabled` | `false` | Density detector (filler lines as a share of **lines**). Off by default: a 「做。」 line is 2 characters, so 26% of lines was only 3% of characters — on live traffic it cut 11 normal thoughts in 21 minutes |
-| `cooldownWindowMs` | `600000` | Cooldown window per session |
-| `cooldownHits` | `3` | Cuts inside the window before cooling down |
+| `streamKillDensityEnabled` | `true` | Density detector (filler lines as a share of **lines**). Was off after 2026-11-24, **re-enabled on 2026-11-26**: while off, real-world recall was only 45.8%, and the main missed shape is filler *spread evenly* through a block (longest consecutive run only 11 lines) |
+| `streamKillDensityMinLines` | `20` | Line-count floor for the density detector |
+| `streamKillDensityRatio` | `0.25` | Filler-line share that triggers |
+| `streamKillDensityMinPlaceholders` | `12` | Absolute count of filler lines. 12 is the most aggressive setting with zero false cuts (measured end-to-end over 11k blocks); one notch looser starts cutting a game session's real design discussion |
+| `cooldownWindowMs` | `600000` | Cooldown window per session (inactive unless `cooldownHits` > 0) |
+| `cooldownHits` | `0` | Cuts inside the window before cooling down. **Default 0 = never cool down** — outbreaks come in runs, and the cooldown covered exactly the rounds that most needed a cut |
 | `cooldownMs` | `300000` | How long the session only passes through |
 | `compensateEnabled` | `true` | Feed the last real lines of a cut block back in the after-cut message |
 | `compensateMaxLines` | `3` | How many real lines to carry over |
 | `compensateMaxChars` | `240` | Character cap for the carried-over text |
 | `streamKillDryRun` | `false` | Dry run: log "would have cut" without cutting |
 | `afterKillText` | one Chinese sentence | Message handed to the model after a cut. Empty means none |
-| `maxKillStreak` | `3` | Stop cutting after this many cuts in a row in one session. 0 disables |
+| `maxKillStreak` | `0` | Stop cutting after this many cuts in a row in one session. **Default 0 = unlimited**: real data shows consecutive cuts are not false positives — they mean the session is in an outbreak (in 5 affected sessions, 79–94% of outbreak rounds were within 3 turns of each other) |
 | `streamKillFastContinue` | `true` | At tier 3 and up, use the synthesized continuation. False forces the followup path |
 | `fakeToolName` | `get_goal` | Tool name used by the synthesized call. Must be read-only and idempotent |
 | `followupFallback` | `true` | Slow path: resume by delivering a message through `agent.followup` |

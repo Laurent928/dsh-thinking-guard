@@ -16,8 +16,10 @@ function makeCorpus() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'tg-analyze-'));
   const sessionDir = path.join(root, 'ws', 'session-test1234');
   fs.mkdirSync(sessionDir, { recursive: true });
-  const bad = Array.from({ length: 40 }, (_, i) => (i % 2 ? '好。' : '做。')).join('\n');
-  const clean = Array.from({ length: 40 }, (_, i) => `第 ${i} 步先看 main.js 里的第 ${i} 行，确认回调绑到 runtime 上再决定。`).join('\n');
+  // 病块要够长：流式检测有 150 字符下限（streamKillMinChars），
+  // 40 行「做。」只有 120 字符——统计口径会判"会掐"，实跑不会。这正是两种口径的区别。
+  const bad = Array.from({ length: 60 }, (_, i) => (i % 2 ? '好。' : '做。')).join('\n');
+  const clean = Array.from({ length: 60 }, (_, i) => `第 ${i} 步先看 main.js 里的第 ${i} 行，确认回调绑到 runtime 上再决定。`).join('\n');
   const event = {
     type: 'assistant/message',
     seq: 1,
@@ -36,17 +38,30 @@ function makeCorpus() {
   return root;
 }
 
-test('analyze：能扫出病块，并按真跑参数算出能抓多少', () => {
+test('analyze：能扫出病块，并报告实测动作（不是统计估算）', () => {
   const root = makeCorpus();
   try {
     const out = execFileSync(process.execPath, [SCRIPT, root, '--json'], { encoding: 'utf8' });
     const report = JSON.parse(out);
+    assert.equal(report.mode, 'replay', '默认必须走实跑，不是统计估算');
     assert.equal(report.total.sessions, 1, '应识别出 1 个会话');
     assert.equal(report.total.blocks, 2, '两个块都该被读进来');
-    assert.equal(report.total.badBlocks, 1, '占位 20/40 的那个块应判为空转');
-    assert.equal(report.total.caughtBlocks, 1, '主判据应该抓得住它');
+    assert.equal(report.total.badBlocks, 1, '占位 30/60 的那个块应判为空转嫌疑');
+    assert.equal(report.total.caughtBlocks, 1, '实跑应该掐得住它');
     assert.equal(report.sessions[0].badBlocks, 1);
     assert.ok(report.sessions[0].badChars > 0);
+    assert.equal(report.coverage.unreadable, 0, '没有读不出来的文件');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('analyze --fast：退回统计口径时必须自报是估算', () => {
+  const root = makeCorpus();
+  try {
+    const out = execFileSync(process.execPath, [SCRIPT, root, '--json', '--fast'], { encoding: 'utf8' });
+    const report = JSON.parse(out);
+    assert.equal(report.mode, 'estimate', '--fast 必须标成估算，不能让读数被误当成实测');
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
