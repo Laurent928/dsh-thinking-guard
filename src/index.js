@@ -257,7 +257,12 @@ export function stripStructuralLines(text) {
   for (let i = 0; i < lines.length; i++) {
     const raw = lines[i];
     const line = raw.trim();
-    if (!line) { kept.push(''); continue; }
+    if (!line) {
+      // 连续空行压成一个：空行只是段落分隔，按句子切分和按周期比对都不该被它撑大。
+      // 2026-11-26 真实语料里有一整块尾部 48 个连续 \n，被周期判据当成「周期 1 × 48 遍」。
+      if (kept.length > 0 && kept[kept.length - 1] !== '') kept.push('');
+      continue;
+    }
     if (mask[i]) continue;                                                     // 代码 / 引用 / 缩进
     if (/href=|src=|https?:\/\//i.test(line)) continue;                         // 链接 / 图片
     const tag = /^<\/?([a-zA-Z][a-zA-Z0-9:-]*)[^>]*>$/.exec(line);
@@ -599,12 +604,19 @@ export function tailCycle(text, opts = {}) {
   const source = String(text ?? '');
   const n = source.length;
   if (n < minChars) return null;
+  // 非空白字符的前缀和。纯换行/纯空格的「周期」不算退化——2026-11-26 在真实语料上抓到过
+  // 一整块尾部 48 个连续 \n 被判成「周期 1 × 48 遍」，那只是排版空行，不是空转。
+  const content = new Int32Array(n + 1);
+  for (let i = 0; i < n; i++) content[i + 1] = content[i] + (source.charCodeAt(i) > 32 ? 1 : 0);
+  if (content[n] < minChars * 0.25) return null;
   let work = 0;
   const pMax = Math.min(maxPeriod, Math.floor(n / minRepeats));
   for (let period = 1; period <= pMax; period++) {
     const need = Math.max(minRepeats * period, minChars);
     if (need > n) break;
     const start = n - need;
+    // 这段周期区里得有点正文：纯空白/纯换行占大半的不算退化
+    if (content[n] - content[start] < need * 0.25) continue;
     let ok = true;
     // 从尾巴往前比：错的周期几乎第一下就不符，所以平均只花一两次比对
     for (let i = n - 1; i - period >= start; i--) {

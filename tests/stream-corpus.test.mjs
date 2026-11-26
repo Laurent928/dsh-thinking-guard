@@ -175,6 +175,10 @@ test('tailCycle：认得出各种周期，也认得出现在没有周期这件�
   assert.equal(tailCycle('---\n'.repeat(6), {}), null, '6×4=24 字，不到 48 字下限');
   assert.equal(tailCycle('一句很长的正常推理内容在这里展开说明，然后继续往前推进。', {}), null, '没有周期就是没有');
   assert.equal(tailCycle('', {}), null);
+  // 纯换行/纯空格的「周期」不是空转：真实语料里抓到过尾部 48 个连续 \n 被判成「周期 1 × 48 遍」
+  assert.equal(tailCycle(stripStructuralLines('\n'.repeat(200)), {}), null, '连续空行不算循环');
+  assert.equal(tailCycle(stripStructuralLines('   \n  \n'.repeat(40)), {}), null, '纯空白也不算');
+  assert.ok(tailCycle(stripStructuralLines('\n'.repeat(200) + '做。\n'.repeat(30)), {}), '空行后面接真轮转，仍然要判');
 });
 
 // ---------- ① 跨推理块不累计 ----------
