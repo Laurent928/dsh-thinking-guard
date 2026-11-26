@@ -43,8 +43,10 @@ export const MAX_LEVEL = 3;
  * 默认配置。profile 的 patch 可以覆盖任意一项。
  * level 默认 1（整理）：只做无损剥离，一次都不打断。
  * 2026-11-25 起默认从 2（慢断）降回 1——默认档不该把生成砍掉，见 CHANGELOG 2.0.0。
+ *
+ * 导出给 `scripts/analyze.mjs` 用：体检报告必须和真跑同一套参数，不许自己复制一份。
  */
-const DEFAULTS = {
+export const DEFAULTS = {
   level: 1,
   /** 默认 stop 序列：中文占位词的三连。用户可自行替换。 */
   stopSequences: ['做。\n好。\n做。', '好。\n做。\n好。', '做。\n好。\n做。\n好。'],
