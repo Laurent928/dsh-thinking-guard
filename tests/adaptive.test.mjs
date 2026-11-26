@@ -294,3 +294,106 @@ test('路由：GET 带 adaptive，POST 能切开关', async () => {
   assert.equal(back.payload.adaptive, true, 'POST 之后读回来是开');
   void route;
 });
+
+// ---------- 2026-11-26 外部反馈的四条（都先复现过再修） ----------
+
+/** 原样喂一串 chunk，不做任何切割假设。 */
+async function feedRaw(ctx, sid, chunks) {
+  const handler = ctx.handlers.get('llm/stream')[0];
+  const next = async function* () { for (const c of chunks) yield c; };
+  const out = [];
+  for await (const c of handler({ sessionId: sid, tools: [{ name: 'get_goal' }] }, next)) out.push(c);
+  return out;
+}
+const deltaOf = (text, index = 0, size = 64) => {
+  const out = [];
+  for (let i = 0; i < text.length; i += size) out.push({ type: 'reasoning-delta', index, text: text.slice(i, i + size) });
+  return out;
+};
+const STOP = { type: 'finish', reason: { kind: 'stop' } };
+
+test('记账：带 block-end 的块也要记成真实占位率，不能记成 0（外部反馈第 4 条）', async () => {
+  // 40 行，前 12 行「好。」= 30%
+  const text = [...Array.from({ length: 12 }, () => '好。'), ...Array.from({ length: 28 }, (_, i) => line(i))].join('\n') + '\n';
+  const cfg = { level: 3, adaptiveEnabled: true, streamKillDryRun: true, streamKillMinChars: 0 };
+
+  writeSessionLevel(path.join(HOME, 'thinking-guard.json'), 'acct-delta', 3);
+  const ctxA = makeCtx();
+  apply(ctxA, { ...cfg, ...CFG });
+  await feedRaw(ctxA, 'acct-delta', [...deltaOf(text), STOP]);
+
+  writeSessionLevel(path.join(HOME, 'thinking-guard.json'), 'acct-block', 3);
+  const ctxB = makeCtx();
+  apply(ctxB, { ...cfg, ...CFG });
+  await feedRaw(ctxB, 'acct-block', [
+    { type: 'block-start', index: 0, blockType: 'reasoning' },
+    ...deltaOf(text),
+    { type: 'block-end', index: 0, block: { type: 'reasoning', text } },
+    STOP,
+  ]);
+
+  const state = readAdaptive(file()).sessions;
+  const a = state['acct-delta']?.rates?.[0];
+  const b = state['acct-block']?.rates?.[0];
+  assert.ok(Math.abs(a - 0.30) < 0.02, `只发增量应记 30%，实际 ${a}`);
+  assert.ok(Math.abs(b - 0.30) < 0.02, `带 block-end 也应记 30%，实际 ${b}（修之前是 0）`);
+});
+
+test('空正文块不算「有产出」（外部反馈第 1 条）', async () => {
+  const loop = '</assistant>\n'.repeat(200);
+  const variants = [
+    ['空 text 块', [{ type: 'block-start', index: 1, blockType: 'text' }, { type: 'block-end', index: 1, block: { type: 'text', text: '' } }]],
+    ['纯空白增量', [{ type: 'text-delta', index: 1, text: '   ' }]],
+    ['纯空白 text 块', [{ type: 'block-start', index: 1, blockType: 'text' }, { type: 'text-delta', index: 1, text: '\n  \n' }, { type: 'block-end', index: 1, block: { type: 'text', text: '\n  \n' } }]],
+  ];
+  for (const [name, progressChunks] of variants) {
+    const sid = `empty-progress-${name}`;
+    writeSessionLevel(path.join(HOME, 'thinking-guard.json'), sid, 3);
+    const ctx = makeCtx();
+    apply(ctx, { level: 3, adaptiveEnabled: false, streamKillMinChars: 0, ...CFG });
+    const out = await feedRaw(ctx, sid, [
+      { type: 'reasoning-delta', index: 0, text: '先想一下。\n' },
+      ...progressChunks,
+      ...deltaOf(loop, 2),
+      STOP,
+    ]);
+    assert.ok(out.some((c) => c.type === 'finish' && c.reason?.kind === 'tool-calls'), `${name} 之后 200 个结束标签应该被掐`);
+  }
+
+  // 对照：真有正文就该保护，不掐
+  const sid = 'real-progress';
+  writeSessionLevel(path.join(HOME, 'thinking-guard.json'), sid, 3);
+  const ctx = makeCtx();
+  apply(ctx, { level: 3, adaptiveEnabled: false, streamKillMinChars: 0, ...CFG });
+  const out = await feedRaw(ctx, sid, [
+    { type: 'reasoning-delta', index: 0, text: '先想一下。\n' },
+    { type: 'text-delta', index: 1, text: '好的，我来看看。' },
+    ...deltaOf(loop, 2),
+    STOP,
+  ]);
+  assert.ok(!out.some((c) => c.type === 'finish' && c.reason?.kind === 'tool-calls'), '有真正文之后就不该再合成');
+});
+
+test('门控拒绝一次弱信号，不锁整条流；后面的强信号照掐（外部反馈第 3 条）', async () => {
+  const sid = 'gate-then-strong';
+  fs.writeFileSync(file(), JSON.stringify({
+    version: 1,
+    sessions: { [sid]: { rates: [0.34, 0.35, 0.32, 0.33], steps: 4, lockUntil: 0 } },
+    order: [sid],
+  }));
+  writeSessionLevel(path.join(HOME, 'thinking-guard.json'), sid, 3);
+  const ctx = makeCtx();
+  apply(ctx, { level: 3, adaptiveEnabled: true, streamKillMinChars: 0, ...CFG });
+
+  // 前缀：每隔一行一个「好。」→ 占位率约 50%，但基线也是 0.34×2=0.68，会被门控拒绝
+  const prefix = [];
+  for (let i = 0; i < 32; i++) prefix.push(i % 2 === 0 ? '好。' : `核对${String(i).padStart(2, '0')}项。`);
+  // 然后接 450 行强循环
+  const out = await feedRaw(ctx, sid, [
+    ...deltaOf(prefix.join('\n') + '\n'),
+    ...deltaOf('</assistant>\n'.repeat(450)),
+    STOP,
+  ]);
+  assert.ok(out.some((c) => c.type === 'finish' && c.reason?.kind === 'tool-calls'),
+    '门控拒绝弱信号之后，精确周期这条强信号仍要能掐');
+});

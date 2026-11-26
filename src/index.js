@@ -537,11 +537,19 @@ export function buildCompensation(lines, cfg) {
   if (!cfg?.compensateEnabled || !Array.isArray(lines)) return "";
   const maxLines = Math.max(1, cfg.compensateMaxLines ?? 3);
   const maxChars = Math.max(20, cfg.compensateMaxChars ?? 240);
+  // 先数一遍每行出现过几次：出现 ≥3 次的是循环内容，不能再喂回去
+  const seen = new Map();
+  for (const line of lines) seen.set(line, (seen.get(line) ?? 0) + 1);
+  const repeatThreshold = Math.max(2, cfg.compensateRepeatSkip ?? 3);
   const picked = [];
   for (let i = lines.length - 1; i >= 0 && picked.length < maxLines; i--) {
     const line = lines[i];
     if (!line || line.length <= 4 || line.length > 80) continue;
     if (MARK_LINE.test(line)) continue;
+    // 循环内容不选：把它带进续轮提示，等于催模型接着复读同一个循环
+    if ((seen.get(line) ?? 0) >= repeatThreshold) continue;
+    // 只含协议标签的行也不选：对模型没有任何语义
+    if (/^<\/?[a-zA-Z][a-zA-Z0-9:-]*>$/.test(line)) continue;
     picked.unshift(line);
   }
   if (picked.length === 0) return "";
@@ -1019,10 +1027,19 @@ export function apply(ctx, config = {}) {
       const freshBlock = () => ({
         chars: 0, deltas: 0, tail: '', maxRun: 0,
         pendingLine: '', recentLines: [], lineTotal: 0, placeTotal: 0, shortTotal: 0,
-        pairCounts: new Map(), pairMax: 0, pairKey: '',
+        pairCounts: new Map(), pairMax: 0, pairKey: '', pairBreak: false, fence: null,
         englishBuf: '', englishAt: -1e9, englishStreak: 0, englishHit: false, englishWhy: '',
         cycleBuf: '', cycleAt: -1e9,
       });
+      /**
+       * 请求级计数（跨推理块累加）。
+       *
+       * 为什么不能直接用块级 st：`block-end` 会把 st 换成新的空块，
+       * 而 finishStep() 是在整条流结束时才跑——那时读 st 只会读到 0。
+       * DSH 每轮都发 block-end，所以这个 bug 会让自适应基线永远是 0、门控实际失效
+       * （2026-11-26 外部反馈第 4 条，复现：只发增量记 0.30，带块边界记 0.00）。
+       */
+      const stepStats = { lines: 0, places: 0 };
       const blockState = new Map();
       let activeBlock = 'none';
       let st = freshBlock();
@@ -1039,16 +1056,25 @@ export function apply(ctx, config = {}) {
         }
         return null;
       };
-      /** 这一块是不是「真有产出」：正文或真实工具。 */
+      /**
+       * 这一块是不是「真有产出」：正文里**真的有字**，或者真实工具。
+       *
+       * 空正文块不算进展（2026-11-26 外部反馈第 1 条）：宿主可以发出一个 `text: ''` 的完整正文块，
+       * 也能逐帧转发纯空白的正文增量。早先只要见到正文类型就把 hasProgress 置真，
+       * 于是之后整条流的推理都不再判——一轮里只要冒出一个空正文块，后面刷 200 个结束标签也不会掐。
+       */
+      const hasText = (value) => typeof value === 'string' && value.trim().length > 0;
       const isProgressChunk = (chunk) => {
         switch (chunk?.type) {
           case 'text-delta':
+            return hasText(chunk.text);
           case 'tool-call-delta':
             return true;
           case 'block-start':
-            return chunk.blockType === 'text' || chunk.blockType === 'tool-call';
+            return chunk.blockType === 'tool-call';   // 正文块的开始还不算有内容
           case 'block-end':
-            return chunk.block?.type === 'text' || chunk.block?.type === 'tool-call';
+            return chunk.block?.type === 'tool-call'
+              || (chunk.block?.type === 'text' && hasText(chunk.block.text));
           default:
             return false;
         }
@@ -1062,6 +1088,8 @@ export function apply(ctx, config = {}) {
       let killDisabled = false;
       /** followup 投递失败过：本流不再重试，免得每个 chunk 都投一次。 */
       let followupBroken = false;
+      /** 门控结论只写一条 trace，免得每个 chunk 刷屏（结论本身每次都会重算）。 */
+      let gateNoted = false;
       let totalDeltas = 0;
       const cycleWindow = Math.max(2048, Math.min(1 << 20, Math.floor(cfg.cycleWindow ?? 12288)));
       const englishStep = Math.max(100, Math.floor(cfg.englishStep ?? 600));
@@ -1097,7 +1125,8 @@ export function apply(ctx, config = {}) {
         if (!adaptiveOn || testFor) return;
         try {
           noteStep(adaptiveFile, key, {
-            rate: st.lineTotal > 0 ? st.placeTotal / st.lineTotal : 0,
+            // 从**请求级**快照落盘，不从块级 st——块可能已经被 block-end 换掉了
+            rate: stepStats.lines > 0 ? stepStats.places / stepStats.lines : 0,
             killed,
             cfg,
           });
@@ -1115,29 +1144,59 @@ export function apply(ctx, config = {}) {
         st.chars += text.length;
         st.deltas += 1;
         totalDeltas += 1;
-        st.tail = (st.tail + text).slice(-TAIL_CHARS);
+        // 注意：tail 不再直接吃原始增量，改成只收「非受保护行」——见下面按行处理那段。
+        // 围栏 / 引用 / 缩进代码里的短行不是空转证据，混进 tail 会让 trailingShortRun 误判。
         st.englishBuf = (st.englishBuf + text).slice(-ENGLISH_BUF);
         st.cycleBuf = (st.cycleBuf + text).slice(-cycleWindow);
 
-        // —— 按换行切出完整行（密度 / 相邻对 / 掐断补偿都要用） ——
+        // —— 按换行切出完整行（密度 / 相邻对 / 短行 / 掐断补偿都要用） ——
         st.pendingLine += text;
         for (let nl = st.pendingLine.indexOf('\n'); nl >= 0; nl = st.pendingLine.indexOf('\n')) {
-          const line = st.pendingLine.slice(0, nl).trim();
+          const rawLine = st.pendingLine.slice(0, nl);
           st.pendingLine = st.pendingLine.slice(nl + 1);
+          const line = rawLine.trim();
           if (!line) continue;
-          const prev = st.recentLines[st.recentLines.length - 1];
-          if (prev !== undefined) {
-            const pk = prev + '|' + line;
-            const seen = (st.pairCounts.get(pk) ?? 0) + 1;
-            st.pairCounts.set(pk, seen);
-            if (seen > st.pairMax) { st.pairMax = seen; st.pairKey = prev + ' / ' + line; }
+
+          // —— 围栏状态机：跨分片记住开围栏的字符和长度 ——
+          // 只认 0–3 个空格开头的围栏；关闭必须同字符、长度不短于开栅栏、整行只剩它。
+          const fenceRun = /^ {0,3}(`{3,}|~{3,})([\s\S]*)$/.exec(rawLine);
+          let protectedLine = false;
+          if (st.fence !== null) {
+            protectedLine = true;
+            if (fenceRun && fenceRun[1][0] === st.fence.char && fenceRun[1].length >= st.fence.length && fenceRun[2].trim() === '') {
+              st.fence = null;
+            }
+          } else if (fenceRun) {
+            protectedLine = true;
+            st.fence = { char: fenceRun[1][0], length: fenceRun[1].length };
+          } else if (/^(?: {4}|\t)/.test(rawLine) || line.startsWith('>')) {
+            protectedLine = true;    // 缩进代码 / 引用块
           }
+
+          if (protectedLine) {
+            // 受保护行：不参与短行、行对、占位计数，也不进 tail；并断开行对连接
+            st.pairBreak = true;
+            continue;
+          }
+
+          if (!st.pairBreak) {
+            const prev = st.recentLines[st.recentLines.length - 1];
+            if (prev !== undefined) {
+              const pk = prev + '|' + line;
+              const seen = (st.pairCounts.get(pk) ?? 0) + 1;
+              st.pairCounts.set(pk, seen);
+              if (seen > st.pairMax) { st.pairMax = seen; st.pairKey = prev + ' / ' + line; }
+            }
+          }
+          st.pairBreak = false;
           st.recentLines.push(line);
           if (st.recentLines.length > RECENT_LINES_MAX) st.recentLines.shift();
           if (st.pairCounts.size > PAIR_COUNTS_MAX) st.pairCounts.clear();
           st.lineTotal += 1;
-          if (isPlaceholder(line)) st.placeTotal += 1;
+          stepStats.lines += 1;                       // 请求级计数：跨块累加，块结束也不清
+          if (isPlaceholder(line)) { st.placeTotal += 1; stepStats.places += 1; }
           if (SHORT_LINE.test(line)) st.shortTotal += 1;
+          st.tail = (st.tail + line + '\n').slice(-TAIL_CHARS);
         }
 
         const run = trailingShortRun(st.tail);
@@ -1197,12 +1256,16 @@ export function apply(ctx, config = {}) {
         //    度量用**占位行占比**，不用短行占比：正常思考里短句本来就多（game 会话短行率
         //    15–30%，比占位率高一大截），拿它当信号会多出 10 个误开火的会话（2026-11-26 实测）。
         //
-        //    占位率本身低于下限时**不走门控**：那不是"填充词型"退化，门控阈值必然高于它、
-        //    拦下去只会白丢召回——⭐ 这种符号循环的占位率就是 0，靠这条才抓得住。
+        //    只拦**弱信号**（连续短行 / 相邻对 / 密度）：它们的证据是"占比"，会被渐变骗到。
+        //    精确周期和英文整句重复要求「原样重复」，是强证据，优先处理、不过门控。
+        //    占位率本身低于下限时也放行：⭐ 这种符号循环的占位率是 0，拦下去等于白丢召回。
         //
-        //    英文句重复和精确周期要求「原样重复」，本身就是强证据，同样不过门控。
+        //    门控拒绝**只否决这一次**，不锁整条流：早先拒绝时写 killDisabled，
+        //    结果弱信号被拒之后，同一流里后来的强信号（450 行结束标签）也一起被漏掉
+        //    （2026-11-26 外部反馈第 3 条，已复现）。
+        const strongHit = cycle !== null || englishHit;
         const occupancyHit = shortHit || repeatHit || densityHit;
-        if (adaptiveOn && occupancyHit && !forced && placeRatio >= (cfg.adaptiveFloor ?? 0.20)) {
+        if (adaptiveOn && occupancyHit && !strongHit && !forced && placeRatio >= (cfg.adaptiveFloor ?? 0.20)) {
           const gate = adaptiveDecision({
             rate: placeRatio,
             lines: st.lineTotal,
@@ -1211,13 +1274,18 @@ export function apply(ctx, config = {}) {
             step: adaptiveHist.steps,
             cfg,
           });
-          const show = (v) => (v === null || v === undefined ? '—' : Math.round(v * 100) + '%');
-          trace(`自适应门控 ${gate.allow ? '放行' : '拦下'}（${gate.reason} 当前 ${show(placeRatio)} 基线 ${show(gate.baseline)} 阈值 ${show(gate.threshold)}）`);
           if (!gate.allow) {
-            // too-short 只是「现在还不能判」，不是「这个会话正常」：行数够了还要再看，
-            // 所以不能把整条流锁死（相邻对判据 20 行就命中，门控要 30 行才判，会撞上）。
-            if (gate.reason !== 'too-short') killDisabled = true;
+            if (!gateNoted) {
+              gateNoted = true;
+              const show = (v) => (v === null || v === undefined ? '—' : Math.round(v * 100) + '%');
+              trace(`自适应门控 拦下（${gate.reason} 当前 ${show(placeRatio)} 基线 ${show(gate.baseline)} 阈值 ${show(gate.threshold)}），本次不掐，继续看后续`);
+            }
             return null;
+          }
+          if (!gateNoted) {
+            gateNoted = true;
+            const show = (v) => (v === null || v === undefined ? '—' : Math.round(v * 100) + '%');
+            trace(`自适应门控 放行（${gate.reason} 当前 ${show(placeRatio)} 基线 ${show(gate.baseline)} 阈值 ${show(gate.threshold)}）`);
           }
         }
 

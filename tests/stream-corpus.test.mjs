@@ -127,6 +127,29 @@ const CASES = [
     text: 'README 的锚点是这样排的：\n' + '<a href="#-what-it-does">What it does</a> ·\n'.repeat(60),
   },
   {
+    name: '正常对照：围栏里的短行不是空转证据（外部反馈第 2 条）',
+    expectCut: false,
+    text: [
+      '先看这段格式，它只是样例：',
+      '```txt',
+      ...Array.from({ length: 20 }, (_, i) => `样例${i}。`),
+      '```',
+      '然后继续往下想：把接口对齐，再回来核对一遍清单。',
+      '最后把结论写进交接文档，别只留在日志里。',
+    ].join('\n'),
+  },
+  {
+    name: '正常对照：围栏里的协议标签也不该触发（同一套保护位）',
+    expectCut: false,
+    text: [
+      '这段是协议原文，贴在围栏里：',
+      '```txt',
+      ...Array.from({ length: 20 }, () => '</assistant>'),
+      '```',
+      '好了，接着推理：先确认边界，再决定要不要改。',
+    ].join('\n'),
+  },
+  {
     name: '正常对照：一大段没有周期的正常思考',
     expectCut: false,
     text: Array.from({ length: 160 }, (_, i) => `第 ${i} 步先看 ${['main.js', 'route.js', 'state.js'][i % 3]} 的第 ${i} 行，确认回调有没有绑到 runtime 上，再决定改不改。`).join('\n'),
