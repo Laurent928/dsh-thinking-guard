@@ -620,21 +620,42 @@ test('重复对判据：好。⏎做。 反复就掐，不等连续短行', asyn
   assert.ok(ctx.logs.some((l) => l.includes('重复对')), '日志应写明是重复对命中');
 });
 
-test('风格性填充不掐：长内容里散着插「好。/嗯。」', async () => {
+test('风格性填充不掐：长内容里偶尔插一个「好。/嗯。」', async () => {
   const file = path.join(HOME, 'thinking-guard.json');
   writeSessionLevel(file, 'style-filler', 3);
   const ctx = makeCtx();
   apply(ctx, { adaptiveEnabled: false, level: 3, streamKillRun: 999, streamKillMinChars: 0, maxKillStreak: 0 });
   const handler = ctx.handlers.get('llm/stream')[0];
   const chunks = [];
-  for (let i = 0; i < 40; i++) {
+  // 80 行长句 + 6 个填充 = 7% 占位率。这是「风格」，不是病。
+  for (let i = 0; i < 80; i++) {
+    chunks.push({ type: 'reasoning-delta', text: `第 ${i} 条：去改图的背袍压痕，再重新生成对照。\n` });
+    if (i % 13 === 0) chunks.push({ type: 'reasoning-delta', text: i % 2 ? '好。\n' : '嗯。\n' });
+  }
+  const next = async function* () { for (const c of chunks) yield c; };
+  const out = [];
+  for await (const c of handler({ sessionId: 'style-filler', tools: [{ name: 'get_goal' }] }, next)) out.push(c);
+  assert.equal(out.length, chunks.length, '低比例的散插填充不该被掐');
+});
+
+test('反过来了：高比例散插要掐（2026-11-26 真实语料改的口径）', async () => {
+  // 真实事故块长这样：627 行里 462 行是占位（74%），占位词在整块里**均匀撒开**，
+  // 十等分看是 48/47/47/43/47/45/45/47/47/46——最长连续只有 11 行，永远连不成 15 行。
+  // 所以「连续短行」这条判据从形状上就抓不到它，得靠密度。
+  const file = path.join(HOME, 'thinking-guard.json');
+  writeSessionLevel(file, 'dense-filler', 3);
+  const ctx = makeCtx();
+  apply(ctx, { adaptiveEnabled: false, level: 3, streamKillRun: 999, streamKillMinChars: 0, maxKillStreak: 0 });
+  const handler = ctx.handlers.get('llm/stream')[0];
+  const chunks = [];
+  for (let i = 0; i < 60; i++) {
     chunks.push({ type: 'reasoning-delta', text: `第 ${i} 条：去改图的背袍压痕，再重新生成对照。\n` });
     chunks.push({ type: 'reasoning-delta', text: i % 2 ? '好。\n' : '嗯。\n' });
   }
   const next = async function* () { for (const c of chunks) yield c; };
   const out = [];
-  for await (const c of handler({ sessionId: 'style-filler', tools: [{ name: 'get_goal' }] }, next)) out.push(c);
-  assert.equal(out.length, chunks.length, '散插的填充行不该被掐');
+  for await (const c of handler({ sessionId: 'dense-filler', tools: [{ name: 'get_goal' }] }, next)) out.push(c);
+  assert.ok(out.length < chunks.length, `50% 占位的散插该掐，实际放行 ${out.length}/${chunks.length}`);
 });
 
 test('冷却：同一会话连掐 3 次后第 4 次整段放行', async () => {
